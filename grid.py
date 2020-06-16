@@ -94,8 +94,33 @@ class Hexagon():
 	def plt_coords(self):
 		return (self.bx, self.by)
 		
-	def bd_coords(self):
-		return (self.x, self.y)			
+	def ext_coords(self):
+		return (self.x, self.y)		
+	
+	def is_inside(self, t):
+		l = len(self.bx)
+#		print(l)
+		for i in range(0,l-1):
+			x0 = self.bx[i]
+			y0 = self.by[i]	
+			
+			x1 = self.bx[i+1]
+			y1 = self.by[i+1]
+			
+			m = (y1 - y0)/(x1 - x0)
+			# test if center point and test point have the same sign
+			val1 = np.sign((self.p.y - y0) - m*(self.p.x - x0))
+			val2 = np.sign((t.y - y0) - m*(t.x - x0))
+			if val2 == 0:
+				return True
+			else:
+				if val1 != val2:
+					return False
+		
+		# It passed all the loops, so should be inside 
+		return True			 	
+				
+						
 		
 	def get_hex(self):
 		ang = np.pi/6
@@ -117,8 +142,8 @@ class Hexagon():
 			self.y.append(ty)		
 
 class HexGrid():
-	def __init__(self, p, d, nrings=1):
-		self.p = p;
+	def __init__(self, d, nrings=1):
+#		self.p = p;
 		self.nrings = nrings
 		self.d = d
 		self.r = d/np.sqrt(3)
@@ -142,6 +167,11 @@ class HexGrid():
 	def get_rings(self):
 		center = Cube(0,0,0)
 		
+		# create a single cell if nrings = 0
+		if self.nrings == 0:
+			self.hexagons = [Hexagon(center, self.d)]
+			return
+			
 		res = cube_spiral(center, self.nrings)
 		self.centers = [cube_to_rect(p, self.r) for p in res]
 		self.hexagons = [Hexagon(c, self.d) for c in self.centers]
@@ -157,7 +187,9 @@ y = 0.0
 
 d = 500 # meters
 
-grid = HexGrid((0,0), d, 4)
+grid = HexGrid(d, 4)
+
+print(grid.hexagons[0].is_inside(Point(475, 60)))
 
 # plot the grids
 for h in grid.hexagons:
