@@ -15,10 +15,12 @@ class LTESim:
 		
 
 	# set fast fading margin value in dB
+	
 	def set_fast_fading_margin(val = -2):
 		setattr(self, 'ffg', val)
 		
 	# set antenna diversity gain in dB	
+	
 	def set_antenna_diversity_gain(val = 3):
 		setattr(self, 'adg', val)	
 	
@@ -26,6 +28,7 @@ class LTESim:
 	# Note: Sign has to be taken care of. 
 	# For example, if power lost is 5 dB then -5 
 	# should be passed as arguments
+	
 	def set_bs_noise_fig(val=-5):
 		setattr(self, 'bs_noise_fig', val)	
 	
@@ -33,6 +36,7 @@ class LTESim:
 	# Note: Sign has to be taken care of. 
 	# For example, if power lost is 5 dB then -9
 	# should be passed as arguments
+	
 	def set_ue_noise_fig(val = -9):
 		setattr(self, 'ue_noise_fig', val)	
 	
@@ -41,6 +45,7 @@ class LTESim:
 	# where N_0 is the Noise temperature density and B is the bandwidth. 
 	# For example, for B = 20 Mhz, value os -100.8174 at 
 	# ambient temperature of 300k
+	
 	def set_noise_temp(val =- 100.8174):
 		setattr(self, 'N', -val)	
 	
@@ -50,6 +55,7 @@ class LTESim:
 	
 	# path loss function, where d is in meters
 	# return in dB
+	
 	def path_loss(self, d):
 		return -(128.1 + 37.6*numpy.log10(d/1000))	
 	
@@ -62,7 +68,13 @@ class LTESim:
 	# set a network topology centered at (0,0) with a given inter-site
 	# distance d in meters and number of rings nrings
 	# if nrings = 0, then a single cell topology is created 
+	
 	def set_topology(self, d = 500, nrings = 4):
+		r = d/np.sqrt(3) 
+		A = np.sqrt(3)*d*d/2
+		setattr(self, 'd', d)
+		setattr(self, 'r', r)
+		setattr(self, 'A', A)
 		setattr(self, 'topo', HexGrid(d, nrings))
 	
 	# expcets a list of objects of type Points, which are used 
@@ -70,8 +82,39 @@ class LTESim:
 	# Note that this assumption is just a simplification of the 
 	# situation. This function can be changed to represent delta
 	# in any manner possible 
+	
 	def set_delta(self, coords):
+		for t in coords:
+			for h in self.topo.hexagons:
+				if h.is_inside(t) is True:
+					h.num_pts += 1
+					break
 		
+		for h in self.topo.hexagons:
+			h.delta = h.num_pts/self.A
+	
+	# outputs a vector of sinrs` given a vector of etas
+	def get_sinr(self, u, eta):
+		cells = self.topo.hexagons
+		sinr = [None]*len(cells)
+		gamma = []
+		for i in range(0, len(cells)):
+			c = cells[i].p
+			dist = get_distance(u, c)
+			sum = 0
+			for j in range(0, len(cells)):
+				if j == i:
+					continue
+				rc = cells[j].p	
+				d = get_distance(u, rc)	
+				sum += eta[j]*self.get_prx(d)
+				
+			sum += -self.N 		
+			gamma[i] = self.get_prx(dist)/sum
+		
+		return gamma	
+			
+							
 		
 			
 	

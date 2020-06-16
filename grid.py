@@ -17,7 +17,10 @@ class Cube:
 	def __init__(self, x, y, z):
 		self.x = x
 		self.y = y
-		self.z = z		
+		self.z = z	
+
+def get_distance(p1, p2):
+	return (np.sqrt(np.square(p1.x - p2.x) + np.square(p1.y - p1.y)))			
 		
 def cube_to_axial(cube):
 	q = cube.x
@@ -90,6 +93,12 @@ class Hexagon():
 		self.by = []
 		
 		self.get_hex()
+		
+		# Number of users inside the cell 
+		self.num_pts = 0
+		
+		# user density in the cell
+		self.delta = 0
 		
 	def plt_coords(self):
 		return (self.bx, self.by)
