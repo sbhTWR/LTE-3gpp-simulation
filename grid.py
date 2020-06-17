@@ -20,6 +20,7 @@ class Cube:
 		self.z = z	
 
 def get_distance(p1, p2):
+#	print('Distance between ({},{}) and ({},{})'.format(p1.x, p1.y, p2.x, p2.y))
 	return (np.sqrt(np.square(p1.x - p2.x) + np.square(p1.y - p1.y)))			
 		
 def cube_to_axial(cube):
@@ -63,7 +64,6 @@ def cube_neighbor(cube, direction):
 
 def cube_ring(center, radius):
 	results = []
-	# this code doesn't work for radius == 0; can you see why?
 	cube = cube_add(center, 
 			cube_scale(cube_direction(4), radius))
 	for i in range(0,6):
@@ -82,9 +82,13 @@ def cube_spiral(center, radius):
 # classes to store hexagons 
 			
 class Hexagon():
-	def __init__(self, p, d):
-		self.p = p
+	def __init__(self, c, d):
+	
+		self.c = c
 		self.d = d
+		self.r = d/np.sqrt(3)
+		
+		self.p = cube_to_rect(c, self.r)
 		
 		self.x = []
 		self.y = []
@@ -92,7 +96,10 @@ class Hexagon():
 		self.bx = []
 		self.by = []
 		
+		#self.nbs = []
+		
 		self.get_hex()
+		#self.get_nbs()
 		
 		# Number of users inside the cell 
 		self.num_pts = 0
@@ -136,7 +143,7 @@ class Hexagon():
 		ang = 0
 		
 		# radius of the hexagon
-		r = d/np.sqrt(3)
+		r = self.d/np.sqrt(3)
 		
 		for i in range(0,7):
 			tx = self.p.x + r*np.cos(ang + np.pi*i/3)
@@ -148,7 +155,13 @@ class Hexagon():
 			tx = self.p.x + r*np.cos(ang + np.pi*i/3)
 			ty = self.p.y + r*np.sin(ang + np.pi*i/3)
 			self.x.append(tx)
-			self.y.append(ty)		
+			self.y.append(ty)
+			
+	def get_nbs(self):
+		res = []
+		for k in range(0,6):
+			res.append(Hexagon(cube_neighbor(self.c, k), self.d))	
+		return res				
 
 class HexGrid():
 	def __init__(self, d, nrings=1):
@@ -182,29 +195,7 @@ class HexGrid():
 			return
 			
 		res = cube_spiral(center, self.nrings)
-		self.centers = [cube_to_rect(p, self.r) for p in res]
-		self.hexagons = [Hexagon(c, self.d) for c in self.centers]
+#		self.centers = [cube_to_rect(p, self.r) for p in res]
+		self.hexagons = [Hexagon(c, self.d) for c in res]
 		#print(self.hexagons[0].bx)
-		#print(len(self.hexagons))	
-			
-	
-							
-					
-		
-x = 0.0
-y = 0.0
-
-d = 500 # meters
-
-grid = HexGrid(d, 4)
-
-print(grid.hexagons[0].is_inside(Point(475, 60)))
-
-# plot the grids
-for h in grid.hexagons:
-	x,y = h.plt_coords()
-	plt.plot(x, y, color='black')
-
-plt.show()	
-
-	
+		#print(len(self.hexagons))		
