@@ -210,15 +210,15 @@ class LTESim:
 	
 	def load_grid_conf(self, file='gconf'):
 		self.grid_conf = np.load(file+'.npy', allow_pickle='TRUE').item()
-		print(type(self.grid_conf))
+#		print(type(self.grid_conf))
 	
 	def load_pt_map(self, file='grid'):
 		self.point_map = np.load(file+'.npy', allow_pickle='TRUE').item()
-		print(type(self.point_map))
+#		print(type(self.point_map))
 		
 	def load_sinr_map(self, file='sinr_map'):
 		self.sinr_map = np.load(file+'.npy', allow_pickle='TRUE')
-		print(type(self.sinr_map))
+#		print(type(self.sinr_map))
 		
 	def load_all(self):
 		self.load_grid_conf()
