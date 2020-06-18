@@ -38,7 +38,11 @@ def cube_to_rect(cube, r):
 		v, u, w = cube.x, cube.y, cube.z
 		x = -u / 2 + v - w / 2
 		y = (u - w) * np.sqrt(3)/2
-		return Point(x*r, y*r)		
+		return Point(x*r, y*r)
+
+# convert a cube object to key to slot into the HexGrid hexagons
+def ctok(c):
+	return '(' + str(c.x) + ',' + str(c.y) + ',' + str(c.z) + ')' 					
 		
 # directions in which we can travel in hex co-ordinate system
 cube_directions = [
@@ -95,6 +99,8 @@ class Hexagon():
 		
 		self.bx = []
 		self.by = []
+		
+		self.on = True
 		
 		#self.nbs = []
 		
@@ -162,6 +168,12 @@ class Hexagon():
 		res = []
 		for k in range(0,6):
 			res.append(Hexagon(cube_neighbor(self.c, k), self.d))	
+		return res
+			
+	def get_nbs_keys(self):
+		res = []
+		for k in range(0,6):
+			res.append(cube_neighbor(self.c, k))	
 		return res				
 
 class HexGrid():
@@ -174,6 +186,9 @@ class HexGrid():
 		self.rings = []
 		self.centers = []
 		self.hexagons = []
+		
+		self.map = {}
+		
 		self.ax = None
 		
 		self.get_rings()
@@ -193,10 +208,13 @@ class HexGrid():
 		# create a single cell if nrings = 0
 		if self.nrings == 0:
 			self.hexagons = [Hexagon(center, self.d)]
+			self.map[ctok(center)] = Hexagon(center, self.d)
 			return
 			
 		res = cube_spiral(center, self.nrings)
 #		self.centers = [cube_to_rect(p, self.r) for p in res]
 		self.hexagons = [Hexagon(c, self.d) for c in res]
+		for c in res:
+			self.map[ctok(c)] = Hexagon(c, self.d)
 		#print(self.hexagons[0].bx)
 		#print(len(self.hexagons))		

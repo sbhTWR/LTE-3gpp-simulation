@@ -31,9 +31,9 @@ from joblib import dump, load
 #loc = 'clusters/nclusters.eps'
 #plt.savefig(loc, format='eps', dpi=1000, bbox_inches='tight')
 
-sinr_map = np.load('sinr_map.npy')
+sinr_map = np.load('sinr_map_one_off.npy')
 
-plt.imshow(sinr_map, cmap='inferno')
+plt.imshow(sinr_map, cmap='viridis')
 plt.colorbar()
 plt.show()
 

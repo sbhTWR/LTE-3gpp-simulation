@@ -1,8 +1,12 @@
 from grid import *
+import matplotlib.pyplot as plt 
 
 class LTESim:
 	def __init__(self):
 		# setup the class with the default values
+		self.point_map = {}
+		self.sinr_map = None
+		self.grid_conf = {}
 		
 		self.set_fast_fading_margin()
 		self.set_antenna_diversity_gain()
@@ -120,7 +124,7 @@ class LTESim:
 		return gamma
 		
 	
-	def get_sinr_nbs(self, u, eta):
+	def get_sinr_nbs(self, u):
 		# first find out the cell to which the UE belongs to
 		conn_bs = None
 		for h in self.topo.hexagons:
@@ -131,6 +135,9 @@ class LTESim:
 		if (conn_bs is None):
 			return -80 # remember to change this
 		
+		if (self.topo.map[ctok(conn_bs.c)].on is False):
+			return -80
+			
 		dist = get_distance(u, conn_bs.p)
 		conn_bs_prx = self.get_prx(dist)
 		
@@ -138,8 +145,20 @@ class LTESim:
 #		print('Prx connect BS: {}'.format(conn_bs_prx))
 		sum = 0
 		
-		for nbs in conn_bs.get_nbs():
-			d = get_distance(u, nbs.p)
+		for nbs in conn_bs.get_nbs_keys():
+			# check if its neighbor exists
+			key = ctok(nbs)
+			if (key not in self.topo.map):
+				continue
+				
+			h = self.topo.map[key]
+			
+			# check if the BS is switched ON
+			if (h.on is False):
+				continue
+				
+			p = cube_to_rect(nbs, self.r)
+			d = get_distance(u, p)
 #			print('Prx nb: {}'.format(self.get_prx(d)))
 			sum += self.dbm_pw((self.get_prx(d)))
 		
@@ -150,4 +169,71 @@ class LTESim:
 		if (np.isclose(sinr, -3.82211)):
 			print('u: ({}, {})'.format(u.x, u.y))
 		return sinr
-						
+		
+	def create_grid(self, lim=2000, steps=50, of_grid_conf='gconf', of_pt_map='grid', of_sinr_map='sinr_map'):
+	
+		self.grid_conf['lim'] = lim
+		self.grid_conf['steps'] = steps
+		
+		np.save(of_grid_conf + '.npy', self.grid_conf)
+		
+		x = np.linspace(-lim, lim, num=steps)
+
+		y = []
+
+		for i in range(0, len(x)-1):
+			y.append((x[i] + x[i+1])/2)
+		
+		# optimization, traverse the grid and store all points belonging to each cell
+		# init list for each hex
+		for h in self.topo.hexagons:
+			self.point_map[ctok(h.c)] = []
+		
+		self.sinr_map = np.empty((len(y), len(y)))
+		
+		# Map each hexagon to its correspodning point
+		# Useful while integrating user density with cell capacity
+		for i in range(len(y)):
+			for j in range(len(y)):
+				for h in self.topo.hexagons:
+					if (h.is_inside(Point(y[i], y[j])) is True):
+						self.point_map[ctok(h.c)].append(Point(i, j)) 
+		
+		np.save(of_pt_map + '.npy', self.point_map)
+		 
+		# Construct a SINR map of this topology
+		for i in range(0, len(y)):
+			for j in range(0, len(y)):
+				self.sinr_map[i,j] = self.get_sinr_nbs(Point(y[i], y[j]))
+		
+		np.save(of_sinr_map + '.npy', self.sinr_map)	
+	
+	def load_grid_conf(self, file='gconf'):
+		self.grid_conf = np.load(file+'.npy', allow_pickle='TRUE').item()
+		print(type(self.grid_conf))
+	
+	def load_pt_map(self, file='grid'):
+		self.point_map = np.load(file+'.npy', allow_pickle='TRUE').item()
+		print(type(self.point_map))
+		
+	def load_sinr_map(self, file='sinr_map'):
+		self.sinr_map = np.load(file+'.npy', allow_pickle='TRUE')
+		print(type(self.sinr_map))
+		
+	def load_all(self):
+		self.load_grid_conf()
+		self.load_pt_map()
+		self.load_sinr_map()							
+	
+	def print_topo(self, cmap='viridis'):
+		
+		plt.imshow(self.sinr_map, cmap=cmap)
+		plt.colorbar()
+		plt.show()			
+		
+		# Clear the plot
+		plt.clf()
+		plt.cla()
+		plt.close()
+				
+							

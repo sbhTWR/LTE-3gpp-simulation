@@ -21,23 +21,59 @@ sim = LTESim()
 sim.set_topology(nrings=4)
 sim.set_delta(coords)
 
-print(sim.topo.hexagons[0].is_inside(Point(0, 500.0)))
+#sim.create_grid()
+sim.load_all()
+sim.print_topo()
 
-#quit()
-lim = 2000
-s = 20
-x = np.arange(-lim, lim+1, s, dtype=int)
-y = np.arange(-lim, lim+1, s, dtype=int)
 
-sinr_map = np.empty((x.size, y.size))
-for i in range(x.size):
-    for j in range(y.size):
-        sinr_map[i,j] = sim.get_sinr_nbs(Point(x[i], y[j]), eta)
+#print(sim.topo.hexagons[0].is_inside(Point(0, 500.0)))
 
-np.save('sinr_map', sinr_map)
-plt.imshow(sinr_map, cmap='viridis')
-plt.colorbar()
-plt.show()
+#print(sim.topo.map['(0,0,0)'].on)
+
+#sim.topo.map['(0,0,0)'].on = False
+
+#print(sim.topo.map['(0,0,0)'].on)
+
+#lim = 2000
+#lim = 2000
+#s = 20
+#x = np.arange(-lim, lim+1, s, dtype=int)
+#y = np.arange(-lim, lim+1, s, dtype=int)
+
+#steps = 50
+#x = np.linspace(-lim, lim, num=steps)
+
+#y = []
+
+#for i in range(0, len(x)-1):
+#	y.append((x[i] + x[i+1])/2)
+
+#print(y)
+#print(len(y))
+
+#point_map = {}
+
+## optimization, traverse the grid and store all points belonging to each cell
+## init list for each hex
+#for h in sim.topo.hexagons:
+#	point_map[ctok(h.c)] = []
+
+#sinr_map = np.empty((len(y), len(y)))
+#for i in range(x.size):
+#	for j in range(y.size):
+#		for h in sim.topo.hexagons:
+#			if (h.is_inside(Point(y[i], y[j])) is True):
+#				point_map[ctok(h.c)].append(Point(i, j)) 
+				 				
+
+#for i in range(0, len(y)):
+#	for j in range(0, len(y)):
+#		sinr_map[i,j] = sim.get_sinr_nbs(Point(y[i], y[j]), eta)
+
+#np.save('sinr_map', sinr_map)
+#plt.imshow(sinr_map, cmap='viridis')
+#plt.colorbar()
+#plt.show()
 
 #print(sim.get_sinr_nbs(Point(100, 100), eta))
 #print(sim.get_sinr_nbs(Point(100, 200), eta))
