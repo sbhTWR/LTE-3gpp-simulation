@@ -21,8 +21,9 @@ sim = LTESim()
 sim.set_topology(nrings=4)
 sim.set_delta(coords)
 
-#print(sim.topo.hexagons[0].is_inside(Point(475, 60)))
+print(sim.topo.hexagons[0].is_inside(Point(0, 500.0)))
 
+#quit()
 lim = 2000
 s = 20
 x = np.arange(-lim, lim+1, s, dtype=int)
@@ -60,6 +61,7 @@ plt.show()
 #	for nb in h.get_nbs():
 #		x,y = nb.plt_coords()
 #		plt.plot(x, y, color='black', linewidth=0.5)
+#plt.show()		
 
 #plt.plot(X['Latitude'], X['Longitude'], 'o', color='black', mfc='none', markersize=5)
 #plt.xlim(-2500,2500)

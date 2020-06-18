@@ -146,5 +146,8 @@ class LTESim:
 #		print('Sum: {}'.format(sum))
 		sinr = self.dbm_pw(conn_bs_prx)/(sum + self.dbm_pw(self.N))	
 		sinr = 10*np.log10(sinr)
+		
+		if (np.isclose(sinr, -3.82211)):
+			print('u: ({}, {})'.format(u.x, u.y))
 		return sinr
 						

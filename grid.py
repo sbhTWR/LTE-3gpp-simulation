@@ -129,12 +129,14 @@ class Hexagon():
 			check = (t.y - y0) - m*(t.x - x0)
 			val2 = np.sign(check)
 			if (np.isclose(check,0)):
-				return True
+#				print('first-> Hex center: ({}, {}) Point: ({}, {}) val = {} m = {} x0 = {} y0 = {} m*2 = {} (x0, y0) = ({}, {}), (x1, y1) = ({}, {})'.format(self.p.x, self.p.y, t.x, t.y, check, m, x0, y0, m*2, x0, y0, x1, y1))
+				continue
 			else:
 				if (val1 != val2):
 					return False
 		
 		# It passed all the loops, so should be inside 
+#		print('second')
 		return True		
 		
 	def get_hex(self):
