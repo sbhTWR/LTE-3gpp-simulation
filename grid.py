@@ -21,7 +21,7 @@ class Cube:
 
 def get_distance(p1, p2):
 #	print('Distance between ({},{}) and ({},{})'.format(p1.x, p1.y, p2.x, p2.y))
-	return (np.sqrt(np.square(p1.x - p2.x) + np.square(p1.y - p1.y)))			
+	return (np.sqrt(np.square(p1.x - p2.x) + np.square(p1.y - p2.y)))			
 		
 def cube_to_axial(cube):
 	q = cube.x
@@ -126,17 +126,16 @@ class Hexagon():
 			m = (y1 - y0)/(x1 - x0)
 			# test if center point and test point have the same sign
 			val1 = np.sign((self.p.y - y0) - m*(self.p.x - x0))
-			val2 = np.sign((t.y - y0) - m*(t.x - x0))
-			if val2 == 0:
+			check = (t.y - y0) - m*(t.x - x0)
+			val2 = np.sign(check)
+			if (np.isclose(check,0)):
 				return True
 			else:
-				if val1 != val2:
+				if (val1 != val2):
 					return False
 		
 		# It passed all the loops, so should be inside 
-		return True			 	
-				
-						
+		return True		
 		
 	def get_hex(self):
 		ang = np.pi/6

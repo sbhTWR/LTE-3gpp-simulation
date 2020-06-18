@@ -45,8 +45,8 @@ class LTESim:
 	# For example, for B = 20 Mhz, value os -100.8174 at 
 	# ambient temperature of 300k
 	
-	def set_noise_temp(self, val =- 100.8174):
-		setattr(self, 'N', -val)	
+	def set_noise_temp(self, val = -100.8174):
+		setattr(self, 'N', val)	
 	
 	# Set maximum power transmit value in dBm
 	def set_max_power_tx(self, val = 49):
@@ -56,13 +56,19 @@ class LTESim:
 	# return in dB
 	
 	def path_loss(self, d):
-		return -(128.1 + 37.6*np.log10(d/1000))	
+		if (d > 0.0000000001):
+			return -(128.1 + 37.6*np.log10(d/1000))	
+		return -128.1
 	
 	# calculates link budget, at a distance 
 	# r meters from the Base Station (BS)
 	def get_prx(self, r):
 		return (self.ptx + self.path_loss(r)	+ self.ffg 
 			+ self.adg + self.bs_noise_fig + self.ue_noise_fig)
+	
+	# Convert power in dBm to Pw (power in Watts)
+	def dbm_pw(self, p):
+		return (np.power(10, float(-3))*np.power(10, p/10))		
 	
 	# set a network topology centered at (0,0) with a given inter-site
 	# distance d in meters and number of rings nrings
@@ -123,18 +129,22 @@ class LTESim:
 				break
 		
 		if (conn_bs is None):
-			return 0
+			return -80 # remember to change this
 		
 		dist = get_distance(u, conn_bs.p)
 		conn_bs_prx = self.get_prx(dist)
 		
+#		print('-- Data --')
+#		print('Prx connect BS: {}'.format(conn_bs_prx))
 		sum = 0
 		
 		for nbs in conn_bs.get_nbs():
 			d = get_distance(u, nbs.p)
-			sum += self.get_prx(d)
+#			print('Prx nb: {}'.format(self.get_prx(d)))
+			sum += self.dbm_pw((self.get_prx(d)))
 		
-		sinr = conn_bs_prx/(sum - self.N)	
-		
+#		print('Sum: {}'.format(sum))
+		sinr = self.dbm_pw(conn_bs_prx)/(sum + self.dbm_pw(self.N))	
+		sinr = 10*np.log10(sinr)
 		return sinr
 						
