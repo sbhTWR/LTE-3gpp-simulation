@@ -16,6 +16,12 @@ class LTESim:
 		self.set_max_power_tx()
 		self.set_topology()
 		
+		self.set_bw_eff()	
+		self.set_sinr_eff()	
+		self.set_bw()	
+		
+		self.set_cmax()		
+		
 
 	# set fast fading margin value in dB
 	
@@ -55,6 +61,24 @@ class LTESim:
 	# Set maximum power transmit value in dBm
 	def set_max_power_tx(self, val = 49):
 		setattr(self, 'ptx', val)
+		
+	# set bandwidth efficiency	'a'
+	def set_bw_eff(self, val = 0.63):
+		setattr(self, 'a', val)	
+	
+	# set SINR efficiency	'b'
+	def set_sinr_eff(self, val = 0.4):
+		setattr(self, 'b', val)	
+	
+	# set bandwidth in Mhz'B'	
+	def set_bw(self, val = 20):
+		setattr(self, 'B', val)	
+	
+	# set max achievable rate in Mbps
+	# This is with respect to the wireless 
+	# technology/hardware at hand	
+	def set_cmax(self, val = 100.8):
+		setattr(self, 'cmax', val)			
 	
 	# path loss function, where d is in meters
 	# return in dB
@@ -235,5 +259,12 @@ class LTESim:
 		plt.clf()
 		plt.cla()
 		plt.close()
+	
+	# Calculate max achievable rate
+	def max_rate(self, u):
+		rate = (self.a)*(self.B)*min(np.log2(1 + self.b*self.get_sinr_nbs(u)),self.cmax)
+	
+	# calculate average rate
+	def avg_rate(self, )	
 				
 							

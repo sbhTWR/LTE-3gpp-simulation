@@ -1,8 +1,12 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import geopy.distance
+from scipy.spatial import Voronoi, voronoi_plot_2d
+
 from kpi import *
 from grid import *
+
+
 
 x = 35.681308
 y = 139.767127
@@ -17,15 +21,27 @@ X['Longitude'] = X['Longitude']/20
 coords = [Point(x,y) for x,y in zip(X['Latitude'], X['Longitude'])]
 eta = [0.5]*61
 
-sim = LTESim()
-sim.set_topology(nrings=4)
-sim.set_delta(coords)
+#sim = LTESim()
+#sim.set_topology(nrings=4)
+#sim.set_delta(coords)
 
-#sim.create_grid()
-sim.load_all()
-sim.print_topo()
+##sim.create_grid()
+#sim.load_all()
+#print(sim.point_map['(0,0,0)'][0].x)
+#sim.print_topo()
+
+points = np.random.rand(10,2) #random
+vor = Voronoi(points)
 
 
+fig = voronoi_plot_2d(vor)
+plt.show()
+
+
+
+
+
+#------- old test code --------#
 #print(sim.topo.hexagons[0].is_inside(Point(0, 500.0)))
 
 #print(sim.topo.map['(0,0,0)'].on)
