@@ -44,23 +44,62 @@ grid = HexGrid(d, 2)
 
 l = grid.get_clove_rings()
 
+# --- inverted -----
+
 #for cell in l:
 #	# center is cell['center']
 ##	clove_grid[ptok(cell['center'])] = {'center': cell['center'], 
 ##										'hex': = {}}
-#	
+#	plt.scatter(cell['center'].y, -cell['center'].x, marker='1')
 #	for c in cell['hex']:
 #		hex = Hexagon(c, d)
 #		bx, by = hex.plt_coords()
-#		plt.plot(bx, by, color='black')
+#		plt.plot(by, [-t for t in bx], color='black')
 
-bs = grid.get_interence_bs([0, 1, 2, 3,4,5], Point(0,0))
-hex = [Hexagon(enb, d) for enb in bs]
+#bs = grid.get_interence_bs(Point(0,0), 3)
+#hex = [Hexagon(enb['hex_c'], d) for enb in bs]
+#pts = [enb['cell_c'] for enb in bs]
+#hex_c = [enb['hex_c'] for enb in bs]
+#for h in hex:
+#	bx, by = h.plt_coords()
+#	plt.plot(by, [-t for t in bx], color='black')
+#	
+##for p in pts:
+##	plt.scatter(p.y, -p.x)	
+
+#for p in hex_c:
+#	plt.scatter(p.y, -p.x, marker='x')	
+
+# --- original -----
+for cell in l:
+	# center is cell['center']
+#	clove_grid[ptok(cell['center'])] = {'center': cell['center'], 
+#										'hex': = {}}
+	plt.scatter(cell['center'].x, cell['center'].y, marker='1')
+	for c in cell['hex']:
+		hex = Hexagon(c, d)
+		bx, by = hex.plt_coords()
+		plt.plot(bx, by, color='black')
+
+bs = grid.get_interence_bs(Point(0,0), 3)
+hex = [Hexagon(enb['hex_c'], d) for enb in bs]
+pts = [enb['cell_c'] for enb in bs]
+hex_c = [enb['hex_c'] for enb in bs]
 
 for h in hex:
 	bx, by = h.plt_coords()
 	plt.plot(bx, by, color='black')
 	
+for p in pts:
+	plt.scatter(p.x, p.y)	
+
+for p in hex_c:
+	plt.scatter(p.x, p.y, marker='x')
+
+print('---inverse test---')
+r = 500
+p = cube_to_rect(rect_to_cube(Point(6.2, 6.9), r), r)
+print(p.x, p.y)	
 plt.show()
 
 #------- old test code --------#

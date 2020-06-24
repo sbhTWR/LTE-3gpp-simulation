@@ -41,9 +41,13 @@ def cube_to_rect(cube, r):
 		return Point(x*r, y*r)
 
 def rect_to_cube(p, r):
-	cubex = (np.sqrt(3)*p.x/3 + p.y/3)/r
-	cubey = -(np.sqrt(3)*p.x/3 - p.y/3)/r
-	cubez = -(2*p.y/(3*r))
+#	cubex = (np.sqrt(3)*p.x/3 + p.y/3)/r
+#	cubey = -(np.sqrt(3)*p.x/3 - p.y/3)/r
+#	cubez = -(2*p.y/(3*r))
+	
+	cubex = (p.y/np.sqrt(3) - p.x/3)/r
+	cubez= -(p.y/np.sqrt(3) + p.x/3)/r
+	cubey = -(cubex + cubez)
 #	print('x: {} y: {} z: {}'.format(cubex, cubey, cubez))
 #	return Cube(np.rint(cubex), np.rint(cubey), np.rint(cubez))
 	return Cube(cubex, cubey, cubez)		
@@ -109,7 +113,10 @@ class Hexagon():
 			self.d = d
 			self.r = d/3
 		
-		self.p = cube_to_rect(c, self.r)
+		if (clove is False):
+			self.p = cube_to_rect(c, self.r)
+		else:
+			self.p = c	
 		
 		self.x = []
 		self.y = []
@@ -164,7 +171,7 @@ class Hexagon():
 		
 	def get_hex(self):
 		ang = np.pi/6
-		ang = 0
+#		ang = 0
 		
 		# radius of the hexagon
 		#r = self.d/np.sqrt(3)
@@ -242,27 +249,50 @@ class HexGrid():
 		#print(self.hexagons[0].bx)
 		#print(len(self.hexagons))	
 	
-	def get_interence_bs(self, list_bs, c):
-		bs = []
-		init_angle = -np.pi/3
-		for n in list_bs:
-			bs.append(rect_to_cube(Point(c.x + self.d*np.cos(init_angle + n*np.pi/3), 
-										c.y + self.d*np.sin(init_angle + n*np.pi/3)), self.r))
-		
-		return bs
+	
 	
 		
 	# receive an object of type Point
 	def get_clove_cells(self, p):
 		rect_c1 = Point(p.x + self.r*np.cos(np.pi/6), p.y + self.r*np.sin(np.pi/6))
-		c1 = rect_to_cube(rect_c1, self.r)
-		c2 = cube_add(c1, cube_direction(3))
-		c3 = cube_add(c1, cube_direction(4))
+#		c1 = rect_to_cube(rect_c1, self.r)
+#		c2 = cube_add(c1, cube_direction(3))
+#		c3 = cube_add(c1, cube_direction(4))
+		d = np.sqrt(3)*self.r
+		rect_c2 = Point(rect_c1.x - d, rect_c1.y)
+		rect_c3 = Point(p.x, p.y - self.r)
 #		print('----')
 #		print('x: {} y: {} z: {}'.format(c1.x, c1.y, c1.z))
 #		print('x: {} y: {} z: {}'.format(c2.x, c2.y, c2.z))
 #		print('x: {} y: {} z: {}'.format(c3.x, c3.y, c3.z))
-		return {'center': p  , 'hex': [c1, c2, c3]}
+		return {'center': p  , 'hex': [rect_c1, rect_c2, rect_c3]}
+		
+		
+	# get information about the interfering cells
+	# num can be either 1, 2 or 3
+	# cell center is returned as POint object,
+	# Hexagon centers are returned in cube co-ordinates
+	
+	def get_interence_bs(self, c, num):
+		if (num == 1):
+			list_bs = [3,4,5]
+		elif (num == 2):
+			list_bs = [5,0,1]
+		else:
+			list_bs = [1,2,3]	
+				
+		bs = []
+		init_angle = -np.pi/6
+		for n in list_bs:
+			cell_c = Point(c.x + self.d*np.cos(init_angle + n*np.pi/3), 
+						   c.y + self.d*np.sin(init_angle + n*np.pi/3))
+													
+			# calculate center of cell, and the interfering sector 
+			hex_c = self.get_clove_cells(cell_c)['hex'][num-1]	
+#			print(hex_c.x,hex_c.y,hex_c.z)
+			bs.append({'cell_c': cell_c, 'hex_c': hex_c})									
+		
+		return bs	
 		
 	# Gets clove rings as in 3GPP LTE FDD topology	
 	def get_clove_rings(self):
@@ -279,7 +309,7 @@ class HexGrid():
 		
 		for i in range(0,6):
 			init_ang = -np.pi/6
-#				init_ang = 0
+#			init_ang = 0
 			ring.append(self.get_clove_cells(Point(dist*np.cos(init_ang + i*ang_diff), dist*np.sin(init_ang + i*ang_diff))))
 			ring.append(self.get_clove_cells(Point(2*dist*np.cos(init_ang + i*ang_diff), 2*dist*np.sin(init_ang + i*ang_diff))))
 			
