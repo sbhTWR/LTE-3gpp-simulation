@@ -36,17 +36,31 @@ eta = [0.5]*61
 
 #fig = voronoi_plot_2d(vor)
 #plt.show()
+
+clove_grid = {}
+
 d = 500
 grid = HexGrid(d, 2)
 
 l = grid.get_clove_rings()
 
-for r in l:
-	for c in r:
-		hex = Hexagon(c, d)
-		bx, by = hex.plt_coords()
-		plt.plot(bx, by, color='black')
+#for cell in l:
+#	# center is cell['center']
+##	clove_grid[ptok(cell['center'])] = {'center': cell['center'], 
+##										'hex': = {}}
+#	
+#	for c in cell['hex']:
+#		hex = Hexagon(c, d)
+#		bx, by = hex.plt_coords()
+#		plt.plot(bx, by, color='black')
 
+bs = grid.get_interence_bs([0, 1, 2, 3,4,5], Point(0,0))
+hex = [Hexagon(enb, d) for enb in bs]
+
+for h in hex:
+	bx, by = h.plt_coords()
+	plt.plot(bx, by, color='black')
+	
 plt.show()
 
 #------- old test code --------#

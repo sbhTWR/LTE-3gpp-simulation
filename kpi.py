@@ -22,6 +22,8 @@ class LTESim:
 		
 		self.set_cmax()		
 		
+		# grid for clove topology
+		self.clove_grid = {}
 
 	# set fast fading margin value in dB
 	
@@ -78,7 +80,48 @@ class LTESim:
 	# This is with respect to the wireless 
 	# technology/hardware at hand	
 	def set_cmax(self, val = 100.8):
-		setattr(self, 'cmax', val)			
+		setattr(self, 'cmax', val)
+		
+	# set BS height in meters	
+	def set_bs_h(self, val=32):
+		setattr(self, 'bs_h', val)
+	
+	# set UE height in meters	
+	def set_ue_h(self, val=1.5):
+		setattr(self, 'ue_h', val)	
+		
+	# antenna gain, given angle, for each sector.
+	# Antenna boresite is the 0 angle, which is the 
+	# angle of maximum gain
+	# Maximum attentuation is considered to be 20 dB
+	
+	def antenna_gain(self, theta, alpha, tilt=0):
+		Am = 20
+		theta_db = 7*np.pi/18
+		alpha_db = 15*np.pi/180
+		A_theta = -min(12*np.power(theta/theta_db, np.float(2)), Am)	
+		A_alpha = -min(12*np.power((alpha - tilt)/alpha_db, np.float(2)), Am)
+		
+		combined = -min(-(A_alpha + A_theta), Am)
+		return combined	
+	
+	# takes distance in cartesian co-ordinates
+	# hex_c tells us the direction of the antenna
+	# as it is towards the center of the hexagonal cell
+		
+	def get_interference_params(self, p, cell_c, hex_c):
+	
+		# horizontal
+		m1 = (p.y - cell_c.y)/(p.x - cell_c.x)
+		m2 = (hex_c.y - cell_c.y)/(hex_c.x - cell_c.x)
+		theta = np.arctan(abs((m1-m2)/(1 + m1*m2)))	
+		
+		# distance
+		r = get_distance(p, cell_c)
+		# vertical
+		alpha = np.arctan((self.bs_h - self.ue_h)/r)
+		
+		return (r, theta, aplha) 		
 	
 	# path loss function, where d is in meters
 	# return in dB
@@ -90,8 +133,8 @@ class LTESim:
 	
 	# calculates link budget, at a distance 
 	# r meters from the Base Station (BS)
-	def get_prx(self, r):
-		return (self.ptx + self.path_loss(r)	+ self.ffg 
+	def get_prx(self, r, alpha, theta):
+		return (self.ptx + self.antenna_gain(alpha, theta) + self.path_loss(r)	+ self.ffg 
 			+ self.adg + self.bs_noise_fig + self.ue_noise_fig)
 	
 	# Convert power in dBm to Pw (power in Watts)

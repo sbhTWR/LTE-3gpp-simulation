@@ -44,11 +44,16 @@ def rect_to_cube(p, r):
 	cubex = (np.sqrt(3)*p.x/3 + p.y/3)/r
 	cubey = -(np.sqrt(3)*p.x/3 - p.y/3)/r
 	cubez = -(2*p.y/(3*r))
-	return Cube(np.rint(cubex), np.rint(cubey), np.rint(cubez))		
+#	print('x: {} y: {} z: {}'.format(cubex, cubey, cubez))
+#	return Cube(np.rint(cubex), np.rint(cubey), np.rint(cubez))
+	return Cube(cubex, cubey, cubez)		
 
 # convert a cube object to key to slot into the HexGrid hexagons
 def ctok(c):
-	return '(' + str(c.x) + ',' + str(c.y) + ',' + str(c.z) + ')' 					
+	return '(' + str(c.x) + ',' + str(c.y) + ',' + str(c.z) + ')' 	
+
+def ptok(p):
+	return '(' + str(p.x) + ',' + str(p.y) + ')' 						
 		
 # directions in which we can travel in hex co-ordinate system
 cube_directions = [
@@ -236,6 +241,16 @@ class HexGrid():
 			self.map[ctok(c)] = Hexagon(c, self.d)
 		#print(self.hexagons[0].bx)
 		#print(len(self.hexagons))	
+	
+	def get_interence_bs(self, list_bs, c):
+		bs = []
+		init_angle = -np.pi/3
+		for n in list_bs:
+			bs.append(rect_to_cube(Point(c.x + self.d*np.cos(init_angle + n*np.pi/3), 
+										c.y + self.d*np.sin(init_angle + n*np.pi/3)), self.r))
+		
+		return bs
+	
 		
 	# receive an object of type Point
 	def get_clove_cells(self, p):
@@ -243,8 +258,13 @@ class HexGrid():
 		c1 = rect_to_cube(rect_c1, self.r)
 		c2 = cube_add(c1, cube_direction(3))
 		c3 = cube_add(c1, cube_direction(4))
-		return [c1, c2, c3]
+#		print('----')
+#		print('x: {} y: {} z: {}'.format(c1.x, c1.y, c1.z))
+#		print('x: {} y: {} z: {}'.format(c2.x, c2.y, c2.z))
+#		print('x: {} y: {} z: {}'.format(c3.x, c3.y, c3.z))
+		return {'center': p  , 'hex': [c1, c2, c3]}
 		
+	# Gets clove rings as in 3GPP LTE FDD topology	
 	def get_clove_rings(self):
 		center = Point(0,0)
 		ring = []
