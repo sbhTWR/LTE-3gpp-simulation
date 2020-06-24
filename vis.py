@@ -33,7 +33,7 @@ from joblib import dump, load
 
 sinr_map = np.load('sinr_map.npy')
 
-plt.imshow(sinr_map, cmap='viridis')
+plt.imshow(sinr_map, cmap='inferno')
 plt.colorbar()
 plt.show()
 

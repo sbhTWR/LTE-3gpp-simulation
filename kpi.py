@@ -18,12 +18,15 @@ class LTESim:
 		
 		self.set_bw_eff()	
 		self.set_sinr_eff()	
-		self.set_bw()	
+		self.set_bw()
+		self.set_bs_h()	
+		self.set_ue_h()	
 		
 		self.set_cmax()		
 		
 		# grid for clove topology
 		self.clove_grid = []
+		self.y = []
 
 	# set fast fading margin value in dB
 	
@@ -103,6 +106,7 @@ class LTESim:
 		A_alpha = -min(12*np.power((alpha - tilt)/alpha_db, np.float(2)), Am)
 		
 		combined = -min(-(A_alpha + A_theta), Am)
+#		print('Antenna gain {}'.format(combined))
 		return combined	
 	
 	# takes distance in cartesian co-ordinates
@@ -112,16 +116,29 @@ class LTESim:
 	def get_inf_params(self, p, cell_c, hex_c):
 	
 		# horizontal
-		m1 = (p.y - cell_c.y)/(p.x - cell_c.x)
-		m2 = (hex_c.y - cell_c.y)/(hex_c.x - cell_c.x)
-		theta = np.arctan(abs((m1-m2)/(1 + m1*m2)))	
+#		m1 = (p.y - cell_c.y)/(p.x - cell_c.x)
+#		m2 = (hex_c.y - cell_c.y)/(hex_c.x - cell_c.x)
+#		theta = np.arctan(abs((m1-m2)/(1 + m1*m2)))	
+		
+		a = np.array([p.x, p.y])
+		b = np.array([cell_c.x, cell_c.y])
+		c = np.array([hex_c.x, hex_c.y])
+		
+		ba = a - b
+		bc = c - b
+		
+		cos_theta = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+		theta = np.arccos(cos_theta)
 		
 		# distance
 		r = get_distance(p, cell_c)
 		# vertical
-		alpha = np.arctan((self.bs_h - self.ue_h)/r)
+		if (np.isclose(r, 0)):
+			alpha = np.pi/2
+		else:
+			alpha = np.arctan((self.bs_h - self.ue_h)/r)
 		
-		return (r, theta, aplha) 		
+		return (r, theta, alpha) 		
 	
 	# path loss function, where d is in meters
 	# return in dB
@@ -134,8 +151,11 @@ class LTESim:
 	# calculates link budget, at a distance 
 	# r meters from the Base Station (BS)
 	def get_prx(self, r, alpha, theta):
-		return (self.ptx + self.antenna_gain(alpha, theta) + self.path_loss(r)	+ self.ffg 
+		prx = (self.ptx + self.antenna_gain(alpha, theta) + self.path_loss(r)	+ self.ffg 
 			+ self.adg + self.bs_noise_fig + self.ue_noise_fig)
+		
+#		print('prx: {}'.format(prx))
+		return prx	
 	
 	# Convert power in dBm to Pw (power in Watts)
 	def dbm_pw(self, p):
@@ -240,7 +260,7 @@ class LTESim:
 			print('u: ({}, {})'.format(u.x, u.y))
 		return sinr
 		
-	def create_grid(self, lim=2000, steps=50, of_grid_conf='gconf', of_pt_map='grid', of_sinr_map='sinr_map'):
+	def create_grid(self, lim=2000, steps=50, of_grid_conf='gconf', of_pt_map='grid', of_y='ytick'):
 	
 		self.grid_conf['lim'] = lim
 		self.grid_conf['steps'] = steps
@@ -267,13 +287,15 @@ class LTESim:
 				hex_dict = {}
 				hex_dict['num'] = i
 				hex_dict['center'] = c
-				hex_dict['obj'] = Hexagon(c, d)
+				hex_dict['obj'] = Hexagon(c, self.d)
 				hex_dict['points'] = []
 				cell_dict['hex'].append(hex_dict)
 			
 			self.clove_grid.append(cell_dict)	
 		
 		self.sinr_map = np.empty((len(y), len(y)))
+		#init with -80 dB 
+		self.sinr_map.fill(-60)
 		
 		# Map each hexagon to its correspodning point
 		# Useful while integrating user density with cell capacity
@@ -291,32 +313,68 @@ class LTESim:
 						break		
 		
 		np.save(of_pt_map + '.npy', self.clove_grid)
-		 
+		self.y = y
+		np.save(of_y + '.npy', self.y)
 		# Construct a SINR map of this topology
-		for i in range(0, len(y)):
-			for j in range(0, len(y)):
-				self.sinr_map[i,j] = self.get_sinr_nbs(Point(y[i], y[j]))
+#		for i in range(0, len(y)):
+#			for j in range(0, len(y)):
+#				self.sinr_map[i,j] = self.get_sinr_nbs(Point(y[i], y[j]))
+#		
+#		np.save(of_sinr_map + '.npy', self.sinr_map)
+	
+	def get_sinr_clove(self, of_sinr_map='sinr_map'):
 		
-		np.save(of_sinr_map + '.npy', self.sinr_map)	
+		
+		k = 1
+		for cell in self.clove_grid:
+			print('>> Processing cell {}'.format(k))
+			for h in cell['hex']:
+				for pt in h['points']:
+					i = pt.x
+					j = pt.y
+					u = Point(self.y[i], self.y[j])
+			
+					# calculate prx from current BS
+					r, theta, aplha = self.get_inf_params(u, cell['center'], h['center'])
+					conn_bs_prx = self.dbm_pw(self.get_prx(r, theta, aplha))
+					
+					ibs = self.topo.get_inf_bs(h['center'], h['num'])
+					sum = 0
+					for bs in ibs:
+						# for this interfering bs, center of cell and sector
+						cell_c = bs['cell_c']
+						hex_c = bs['hex_c']
+						r, theta, aplha = self.get_inf_params(u, cell_c, hex_c)
+						# calculate prx for this scenario
+						sum += self.dbm_pw(self.get_prx(r, theta, aplha))
+					sinr = conn_bs_prx/(sum + self.dbm_pw(self.N))	
+					sinr = 10*np.log10(sinr)
+					self.sinr_map[i,j] = sinr
+			k += 1	
+		np.save(of_sinr_map + '.npy', self.sinr_map)		
 	
 	def load_grid_conf(self, file='gconf'):
 		self.grid_conf = np.load(file+'.npy', allow_pickle='TRUE').item()
 #		print(type(self.grid_conf))
 	
 	def load_pt_map(self, file='grid'):
-		self.point_map = np.load(file+'.npy', allow_pickle='TRUE').item()
+		self.clove_grid = np.load(file+'.npy', allow_pickle='TRUE')
 #		print(type(self.point_map))
 		
 	def load_sinr_map(self, file='sinr_map'):
 		self.sinr_map = np.load(file+'.npy', allow_pickle='TRUE')
 #		print(type(self.sinr_map))
+
+	def load_ytick(self, file='ytick'):
+		self.y = np.load(file+'.npy', allow_pickle='TRUE')
 		
 	def load_all(self):
 		self.load_grid_conf()
 		self.load_pt_map()
-		self.load_sinr_map()							
+		self.load_sinr_map()
+		self.load_ytick()							
 	
-	def print_topo(self, cmap='viridis'):
+	def print_topo(self, cmap='inferno'):
 		
 		plt.imshow(self.sinr_map, cmap=cmap)
 		plt.colorbar()

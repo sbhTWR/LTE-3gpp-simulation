@@ -21,14 +21,15 @@ X['Longitude'] = X['Longitude']/20
 coords = [Point(x,y) for x,y in zip(X['Latitude'], X['Longitude'])]
 eta = [0.5]*61
 
-#sim = LTESim()
-#sim.set_topology(nrings=4)
+sim = LTESim()
+sim.set_topology(nrings=4)
 #sim.set_delta(coords)
 
-##sim.create_grid()
-#sim.load_all()
+#sim.create_grid(steps=200)
+sim.load_all()
+sim.get_sinr_clove()
 #print(sim.point_map['(0,0,0)'][0].x)
-#sim.print_topo()
+sim.print_topo()
 
 #points = np.random.rand(10,2) #random
 #vor = Voronoi(points)
@@ -37,24 +38,24 @@ eta = [0.5]*61
 #fig = voronoi_plot_2d(vor)
 #plt.show()
 
-clove_grid = {}
+#clove_grid = {}
 
-d = 500
-grid = HexGrid(d, 2)
+#d = 500
+#grid = HexGrid(d, 2)
 
-l = grid.get_clove_rings()
+#l = grid.get_clove_rings()
 
-for cell in l:
-	cell_dict = {}
-	cell_dict['center'] = cell['center']
-	cell_dict['hex'] = []
-	
-	for i, c in enumerate(cell['hex']):
-		hex_dict = {}
-		hex_dict['num'] = i
-		hex_dict['center'] = c
-		hex_dict['obj'] = Hexagon(c, d)
-		hex_dict['points'] = []
+#for cell in l:
+#	cell_dict = {}
+#	cell_dict['center'] = cell['center']
+#	cell_dict['hex'] = []
+#	
+#	for i, c in enumerate(cell['hex']):
+#		hex_dict = {}
+#		hex_dict['num'] = i
+#		hex_dict['center'] = c
+#		hex_dict['obj'] = Hexagon(c, d)
+#		hex_dict['points'] = []
 
 # --- inverted -----
 
