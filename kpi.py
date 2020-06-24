@@ -260,11 +260,11 @@ class LTESim:
 		plt.cla()
 		plt.close()
 	
-	# Calculate max achievable rate
-	def max_rate(self, u):
-		rate = (self.a)*(self.B)*min(np.log2(1 + self.b*self.get_sinr_nbs(u)),self.cmax)
-	
-	# calculate average rate
-	def avg_rate(self, )	
+#	# Calculate max achievable rate
+#	def max_rate(self, u):
+#		rate = (self.a)*(self.B)*min(np.log2(1 + self.b*self.get_sinr_nbs(u)),self.cmax)
+#	
+#	# calculate average rate
+#	def avg_rate(self, )	
 				
 							

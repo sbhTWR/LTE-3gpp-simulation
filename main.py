@@ -30,16 +30,24 @@ eta = [0.5]*61
 #print(sim.point_map['(0,0,0)'][0].x)
 #sim.print_topo()
 
-points = np.random.rand(10,2) #random
-vor = Voronoi(points)
+#points = np.random.rand(10,2) #random
+#vor = Voronoi(points)
 
 
-fig = voronoi_plot_2d(vor)
+#fig = voronoi_plot_2d(vor)
+#plt.show()
+d = 500
+grid = HexGrid(d, 2)
+
+l = grid.get_clove_rings()
+
+for r in l:
+	for c in r:
+		hex = Hexagon(c, d)
+		bx, by = hex.plt_coords()
+		plt.plot(bx, by, color='black')
+
 plt.show()
-
-
-
-
 
 #------- old test code --------#
 #print(sim.topo.hexagons[0].is_inside(Point(0, 500.0)))

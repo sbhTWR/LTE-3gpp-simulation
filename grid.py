@@ -40,6 +40,12 @@ def cube_to_rect(cube, r):
 		y = (u - w) * np.sqrt(3)/2
 		return Point(x*r, y*r)
 
+def rect_to_cube(p, r):
+	cubex = (np.sqrt(3)*p.x/3 + p.y/3)/r
+	cubey = -(np.sqrt(3)*p.x/3 - p.y/3)/r
+	cubez = -(2*p.y/(3*r))
+	return Cube(np.rint(cubex), np.rint(cubey), np.rint(cubez))		
+
 # convert a cube object to key to slot into the HexGrid hexagons
 def ctok(c):
 	return '(' + str(c.x) + ',' + str(c.y) + ',' + str(c.z) + ')' 					
@@ -86,11 +92,17 @@ def cube_spiral(center, radius):
 # classes to store hexagons 
 			
 class Hexagon():
-	def __init__(self, c, d):
+	def __init__(self, c, d, clove=True):
 	
 		self.c = c
-		self.d = d
-		self.r = d/np.sqrt(3)
+		
+		if (clove is False):
+			self.d = d
+			self.r = d/np.sqrt(3)
+		
+		else:
+			self.d = d
+			self.r = d/3
 		
 		self.p = cube_to_rect(c, self.r)
 		
@@ -150,17 +162,17 @@ class Hexagon():
 		ang = 0
 		
 		# radius of the hexagon
-		r = self.d/np.sqrt(3)
+		#r = self.d/np.sqrt(3)
 		
 		for i in range(0,7):
-			tx = self.p.x + r*np.cos(ang + np.pi*i/3)
-			ty = self.p.y + r*np.sin(ang + np.pi*i/3)
+			tx = self.p.x + self.r*np.cos(ang + np.pi*i/3)
+			ty = self.p.y + self.r*np.sin(ang + np.pi*i/3)
 			self.bx.append(tx)
 			self.by.append(ty)
 		
 		for i in range(0,6):
-			tx = self.p.x + r*np.cos(ang + np.pi*i/3)
-			ty = self.p.y + r*np.sin(ang + np.pi*i/3)
+			tx = self.p.x + self.r*np.cos(ang + np.pi*i/3)
+			ty = self.p.y + self.r*np.sin(ang + np.pi*i/3)
 			self.x.append(tx)
 			self.y.append(ty)
 			
@@ -177,12 +189,18 @@ class Hexagon():
 		return res				
 
 class HexGrid():
-	def __init__(self, d, nrings=1):
+	def __init__(self, d, nrings=1, clove=True):
 #		self.p = p;
 		self.nrings = nrings
-		self.d = d
-		self.r = d/np.sqrt(3)
 		
+		if (clove is False):
+			self.d = d
+			self.r = d/np.sqrt(3)
+		
+		else:
+			self.d = d
+			self.r = d/3
+			
 		self.rings = []
 		self.centers = []
 		self.hexagons = []
@@ -191,7 +209,7 @@ class HexGrid():
 		
 		self.ax = None
 		
-		self.get_rings()
+		#self.get_rings()
 	
 #	def deprecated_get_rings(self):
 #		# get center cell
@@ -217,4 +235,43 @@ class HexGrid():
 		for c in res:
 			self.map[ctok(c)] = Hexagon(c, self.d)
 		#print(self.hexagons[0].bx)
-		#print(len(self.hexagons))		
+		#print(len(self.hexagons))	
+		
+	# receive an object of type Point
+	def get_clove_cells(self, p):
+		rect_c1 = Point(p.x + self.r*np.cos(np.pi/6), p.y + self.r*np.sin(np.pi/6))
+		c1 = rect_to_cube(rect_c1, self.r)
+		c2 = cube_add(c1, cube_direction(3))
+		c3 = cube_add(c1, cube_direction(4))
+		return [c1, c2, c3]
+		
+	def get_clove_rings(self):
+		center = Point(0,0)
+		ring = []
+		
+		ring.append(self.get_clove_cells(center))
+		
+		if self.nrings == 0:
+			return ring
+		
+		dist = self.d
+		ang_diff = np.pi/(3)
+		
+		for i in range(0,6):
+			init_ang = -np.pi/6
+#				init_ang = 0
+			ring.append(self.get_clove_cells(Point(dist*np.cos(init_ang + i*ang_diff), dist*np.sin(init_ang + i*ang_diff))))
+			ring.append(self.get_clove_cells(Point(2*dist*np.cos(init_ang + i*ang_diff), 2*dist*np.sin(init_ang + i*ang_diff))))
+			
+		for i in range(0,6):
+#				init_ang = -np.pi/6
+			init_ang = 0
+			m = np.sqrt(3)
+			ring.append(self.get_clove_cells(Point(m*dist*np.cos(init_ang + i*ang_diff), m*dist*np.sin(init_ang + i*ang_diff))))
+		
+		return ring		
+				
+		
+			
+			
+				
