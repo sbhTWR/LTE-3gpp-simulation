@@ -23,7 +23,7 @@ class LTESim:
 		self.set_cmax()		
 		
 		# grid for clove topology
-		self.clove_grid = {}
+		self.clove_grid = []
 
 	# set fast fading margin value in dB
 	
@@ -109,7 +109,7 @@ class LTESim:
 	# hex_c tells us the direction of the antenna
 	# as it is towards the center of the hexagonal cell
 		
-	def get_interference_params(self, p, cell_c, hex_c):
+	def get_inf_params(self, p, cell_c, hex_c):
 	
 		# horizontal
 		m1 = (p.y - cell_c.y)/(p.x - cell_c.x)
@@ -146,8 +146,11 @@ class LTESim:
 	# if nrings = 0, then a single cell topology is created 
 	
 	def set_topology(self, d = 500, nrings = 4):
-		r = d/np.sqrt(3) 
-		A = np.sqrt(3)*d*d/2
+#		r = d/np.sqrt(3)
+#		A = np.sqrt(3)*d*d/2
+		r = d/3
+		A = 3*np.sqrt(3)*r*r/2
+		
 		setattr(self, 'd', d)
 		setattr(self, 'r', r)
 		setattr(self, 'A', A)
@@ -253,8 +256,22 @@ class LTESim:
 		
 		# optimization, traverse the grid and store all points belonging to each cell
 		# init list for each hex
-		for h in self.topo.hexagons:
-			self.point_map[ctok(h.c)] = []
+		l = self.topo.get_clove_rings()
+
+		for cell in l:
+			cell_dict = {}
+			cell_dict['center'] = cell['center']
+			cell_dict['hex'] = []
+			
+			for i, c in enumerate(cell['hex']):
+				hex_dict = {}
+				hex_dict['num'] = i
+				hex_dict['center'] = c
+				hex_dict['obj'] = Hexagon(c, d)
+				hex_dict['points'] = []
+				cell_dict['hex'].append(hex_dict)
+			
+			self.clove_grid.append(cell_dict)	
 		
 		self.sinr_map = np.empty((len(y), len(y)))
 		
@@ -262,11 +279,18 @@ class LTESim:
 		# Useful while integrating user density with cell capacity
 		for i in range(len(y)):
 			for j in range(len(y)):
-				for h in self.topo.hexagons:
-					if (h.is_inside(Point(y[i], y[j])) is True):
-						self.point_map[ctok(h.c)].append(Point(i, j)) 
+				# iterate through all the cells and sectors
+				found = False
+				for cell in self.clove_grid:
+					for h in cell['hex']:
+						if (h['obj'].is_inside(Point(y[i], y[j]))):
+							h['points'].append(Point(i,j))
+							break
+						
+					if (found is True):
+						break		
 		
-		np.save(of_pt_map + '.npy', self.point_map)
+		np.save(of_pt_map + '.npy', self.clove_grid)
 		 
 		# Construct a SINR map of this topology
 		for i in range(0, len(y)):

@@ -273,7 +273,7 @@ class HexGrid():
 	# cell center is returned as POint object,
 	# Hexagon centers are returned in cube co-ordinates
 	
-	def get_interence_bs(self, c, num):
+	def get_inf_bs(self, c, num):
 		if (num == 1):
 			list_bs = [3,4,5]
 		elif (num == 2):
