@@ -15,6 +15,8 @@ class LTESim:
 		self.density_map = None
 		self.grid_conf = {}
 		
+		self.set_num_flows()
+		self.set_flow_size()
 		self.set_fast_fading_margin()
 		self.set_antenna_diversity_gain()
 		self.set_bs_noise_fig()
@@ -38,14 +40,29 @@ class LTESim:
 		self.coords = None
 		self.points = None
 		self.inf_map = None
+		# get max cell capacity
+		self.ci_map = None
+		# ro and mew
+		self.ro = None
+		self.mew = None
 		
 	# set fast fading margin value in dB
-	
+	def set_num_flows(self, val = 2):
+		setattr(self, 'num_flows', val)
+			
+	# set fast fading margin value in dB
+	def set_think_time(self, val = 2):
+		setattr(self, 'think_time', val)	
+			
+	# set fast fading margin value in dB
+	def set_flow_size(self, val = 0.032):
+		setattr(self, 'omega', val)	
+		
+	# set fast fading margin value in dB
 	def set_fast_fading_margin(self, val = -2):
 		setattr(self, 'ffg', val)
 		
 	# set antenna diversity gain in dB	
-	
 	def set_antenna_diversity_gain(self, val = 3):
 		setattr(self, 'adg', val)	
 	
@@ -53,7 +70,6 @@ class LTESim:
 	# Note: Sign has to be taken care of. 
 	# For example, if power lost is 5 dB then -5 
 	# should be passed as arguments
-	
 	def set_bs_noise_fig(self, val=-5):
 		setattr(self, 'bs_noise_fig', val)	
 	
@@ -61,7 +77,6 @@ class LTESim:
 	# Note: Sign has to be taken care of. 
 	# For example, if power lost is 5 dB then -9
 	# should be passed as arguments
-	
 	def set_ue_noise_fig(self, val = -9):
 		setattr(self, 'ue_noise_fig', val)	
 	
@@ -70,7 +85,6 @@ class LTESim:
 	# where N_0 is the Noise temperature density and B is the bandwidth. 
 	# For example, for B = 20 Mhz, value os -100.8174 at 
 	# ambient temperature of 300k
-	
 	def set_noise_temp(self, val = -100.8174):
 		setattr(self, 'N', val)	
 	
@@ -108,7 +122,6 @@ class LTESim:
 	# Antenna boresite is the 0 angle, which is the 
 	# angle of maximum gain
 	# Maximum attentuation is considered to be 20 dB
-	
 	def antenna_gain(self, theta, alpha, tilt=0):
 		Am = 20
 		theta_db = 7*np.pi/18
@@ -123,7 +136,6 @@ class LTESim:
 	# takes distance in cartesian co-ordinates
 	# hex_c tells us the direction of the antenna
 	# as it is towards the center of the hexagonal cell
-		
 	def get_inf_params(self, p, cell_c, hex_c):
 	
 		# horizontal
@@ -175,7 +187,6 @@ class LTESim:
 	# set a network topology centered at (0,0) with a given inter-site
 	# distance d in meters and number of rings nrings
 	# if nrings = 0, then a single cell topology is created 
-	
 	def set_topology(self, d = 500, nrings = 4):
 #		r = d/np.sqrt(3)
 #		A = np.sqrt(3)*d*d/2
@@ -192,7 +203,6 @@ class LTESim:
 	# Note that this assumption is just a simplification of the 
 	# situation. This function can be changed to represent delta
 	# in any manner possible 
-	
 	def set_delta(self, coords):
 		for t in coords:
 			for h in self.topo.hexagons:
@@ -276,6 +286,7 @@ class LTESim:
 		
 		self.grid_conf['lim'] = lim
 		self.grid_conf['steps'] = steps
+		self.grid_conf['du'] = np.power(2*lim/steps, float(2))
 		
 		np.save(of_grid_conf + '.npy', self.grid_conf)
 		
@@ -553,28 +564,29 @@ class LTESim:
 		plt.close()
 		
 	def get_hex_id_from_center(self, cc, hc):
-		print('cc: ({}, {}) hc: ({}, {})'.format(cc.x, cc.y, hc.x, hc.y))
+#		print('cc: ({}, {}) hc: ({}, {})'.format(cc.x, cc.y, hc.x, hc.y))
 		for cell in self.clove_grid:
 			c = cell['center']
-			print('cell compare: ({}, {})'.format(c.x, c.y))
+#			print('cell compare: ({}, {})'.format(c.x, c.y))
 			if not(np.isclose(c.x, cc.x) and np.isclose(c.y, cc.y)):
 				continue
 			for h in cell['hex']:
 				c = h['center']
-				print('hex compare: ({}, {})'.format(c.x, c.y))
+#				print('hex compare: ({}, {})'.format(c.x, c.y))
 				if (np.isclose(c.x, hc.x) and np.isclose(c.y, hc.y)):
 					return h['id']
 			break		
 		
 		raise Exception('Invalid hex center in argument. Check your code!')			
 	
-	def get_ci(self, eta):
+	def get_eta(self, eta):
 		
 		if (len(eta) != 21):
 			raise Exception('ERROR: eta must be of size 21')
 			
-		# sinr vector
-		sinr = [None]*21	
+		self.ci_map = np.empty((len(self.y), len(self.y))) 
+		self.ci_map.fill(0)
+			
 		k = 1
 		hex_id = 0
 		
@@ -584,33 +596,81 @@ class LTESim:
 				for pt in h['points']:
 					i = pt.x
 					j = pt.y
+					inf = self.inf_map[i][j]
 					u = Point(self.y[i], self.y[j])
 			
-					# calculate prx from current BS
-					r, theta, aplha = self.get_inf_params(u, cell['center'], h['center'])
-					conn_bs_prx = self.dbm_pw(self.get_prx(r, theta, aplha))
+					conn_bs_prx = inf['conn_bs_prx']
 					
-					ibs = self.topo.get_inf_bs(h['center'], h['num'])
 					sum = 0
-					for bs in ibs:
+					for bs in inf['ibs']:
 						# for this interfering bs, center of cell and sector
-						cell_c = bs['cell_c']
-						hex_c = bs['hex_c']
-						r, theta, aplha = self.get_inf_params(u, cell_c, hex_c)
+						hex_id = bs['hex_id']
+						prx = bs['prx']
+						print('>> hex_id {}'.format(hex_id))
 						# calculate prx for this scenario
-						sum += eta[hex_id]*self.dbm_pw(self.get_prx(r, theta, aplha))
+						sum += eta[hex_id]*prx
 					sinr = conn_bs_prx/(sum + self.dbm_pw(self.N))	
 					sinr = 10*np.log10(sinr)
-					self.sinr_map[i,j] = sinr
+					self.ci_map[i][j] = (self.a)*(self.B)*min(np.log2(1 + self.b*sinr), self.cmax)
 							
 			k += 1	
 			# we are only processing the inner 21 cells
 			if (k==8):
 				break
 		
-		# now for each point calculate cell capacity ci
+		self.mew = [None]*21
+		self.ro = [None]*21
+		eta = [None]*21
+		# now integrate and calculate average cell capacity for each of the 21 cells
+		for cell in self.clove_grid:
+			print('>> [ETA Ci] Processing cell {}'.format(k))
+			for h in cell['hex']:
+				# calculate sum of traffic densities for each cell
+				area_sum = 0
+				for pt in h['points']:
+					i = pt.x
+					j = pt.y
+#					u = Point(self.y[i], self.y[j])
+					area_sum += self.density_map[i,j]
+				
+				area_sum = area_sum*self.A	
+				
+				avc = 0	
+				lam_av = 1/self.think_time
+				lam = 0
+				du = 400 # temporary, replace by self.du
+				for pt in h['points']:
+					i = pt.x
+					j = pt.y
+#					u = Point(self.y[i], self.y[j])
+					res = (self.density_map[i,j]/(area_sum*self.ci_map[i][j]))*du
+					avc += 1/res
+					lam += self.density_map[i,j]*du
+				
+				lam = lam*lam_av	
+				mew = avc/self.omega
+				self.mew[h['id']] = mew
+				self.ro[h['id']] = lam/mew
+								
+			k += 1	
+			# we are only processing the inner 21 cells
+			if (k==8):
+				break
+			
+			eta = self.ro*np.power(1 - self.ro, float(self.num_flows))/(1 - np.power(self.ro, float(self.num_flows)))
+			return eta
+				
 		
-					
+	def optimize(self, init_eta):
+		
+		tol = 0.01
+		prev_eta = init_eta
+		new_eta = self.get_eta(prev_eta)
+		while not(np.isclose(new_eta, prev_eta, atol=tol).all()):
+			prev_eta = new_eta
+			new_eta = self.get_eta(new_eta)
+		
+		return new_eta					
 #	# Calculate max achievable rate
 #	def max_rate(self, u):
 #		rate = (self.a)*(self.B)*min(np.log2(1 + self.b*self.get_sinr_nbs(u)),self.cmax)
