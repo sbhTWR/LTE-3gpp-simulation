@@ -29,7 +29,7 @@ sim.load_all()
 #sim.get_sinr_clove()
 #sim.print_topo()
 sim.set_coords(X, x, y)
-#sim.print_vor_tes(True)
+sim.print_vor_tes(True)
 sim.grid_est_traffic()
 sim.print_density_map()
 

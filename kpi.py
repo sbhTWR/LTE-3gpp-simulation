@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import geopy.distance
 import numpy as np
 import shapely.geometry as shape
-from utils import *
+from scipy.spatial import Voronoi, voronoi_plot_2d
+from utils import voronoi_finite_polygons_2d, PolyArea
 from mpl_toolkits.mplot3d import Axes3D
 
 class LTESim:
@@ -285,7 +286,11 @@ class LTESim:
 		# optimization, traverse the grid and store all points belonging to each cell
 		# init list for each hex
 		l = self.topo.get_clove_rings()
-
+		
+		# to assign a unique identifier to each cell
+		hex_id = 0
+		self.clove_grid = []
+		
 		for cell in l:
 			cell_dict = {}
 			cell_dict['center'] = cell['center']
@@ -297,10 +302,13 @@ class LTESim:
 				hex_dict['center'] = c
 				hex_dict['obj'] = Hexagon(c, self.d)
 				hex_dict['points'] = []
+				hex_dict['id'] = hex_id
+				hex_id += 1
 				cell_dict['hex'].append(hex_dict)
 			
 			self.clove_grid.append(cell_dict)	
 		
+		print(hex_id)
 		self.sinr_map = np.empty((len(y), len(y)))
 		#init with -80 dB 
 		self.sinr_map.fill(-60)
@@ -422,7 +430,7 @@ class LTESim:
 			ty = sum(y)/len(y)
 			plt.text(tx, ty, str(round(traffic_est_scale/A, 2)))
 
-		plt.plot(self.points[:,0], self.points[:,1], 'ko')
+#		plt.plot(self.points[:,0], self.points[:,1], 'ko')
 		
 		if (lim is True):
 			plt.xlim(vor.min_bound[0] - 0.1, vor.max_bound[0] + 0.1)
@@ -516,6 +524,36 @@ class LTESim:
 		plt.clf()
 		plt.cla()
 		plt.close()
+	
+	def get_sinr_clove_eta(self, eta):
+		
+		k = 1
+		for cell in self.clove_grid:
+			print('>> [ETA SINR] Processing cell {}'.format(k))
+			for h in cell['hex']:
+				for pt in h['points']:
+					i = pt.x
+					j = pt.y
+					u = Point(self.y[i], self.y[j])
+			
+					# calculate prx from current BS
+					r, theta, aplha = self.get_inf_params(u, cell['center'], h['center'])
+					conn_bs_prx = self.dbm_pw(self.get_prx(r, theta, aplha))
+					
+					ibs = self.topo.get_inf_bs(h['center'], h['num'])
+					sum = 0
+					for bs in ibs:
+						# for this interfering bs, center of cell and sector
+						cell_c = bs['cell_c']
+						hex_c = bs['hex_c']
+						r, theta, aplha = self.get_inf_params(u, cell_c, hex_c)
+						# calculate prx for this scenario
+						sum += self.dbm_pw(self.get_prx(r, theta, aplha))
+					sinr = conn_bs_prx/(sum + self.dbm_pw(self.N))	
+					sinr = 10*np.log10(sinr)
+					self.sinr_map[i,j] = sinr
+			k += 1	
+		np.save(of_sinr_map + '.npy', self.sinr_map)			
 #	# Calculate max achievable rate
 #	def max_rate(self, u):
 #		rate = (self.a)*(self.B)*min(np.log2(1 + self.b*self.get_sinr_nbs(u)),self.cmax)
