@@ -37,6 +37,8 @@ class LTESim:
 		# coords
 		self.coords = None
 		self.points = None
+		self.inf_map = None
+		
 	# set fast fading margin value in dB
 	
 	def set_fast_fading_margin(self, val = -2):
@@ -271,6 +273,7 @@ class LTESim:
 		
 	def create_grid(self, lim=2000, steps=50, of_grid_conf='gconf', of_pt_map='grid', of_y='ytick'):
 	
+		
 		self.grid_conf['lim'] = lim
 		self.grid_conf['steps'] = steps
 		
@@ -290,7 +293,6 @@ class LTESim:
 		# to assign a unique identifier to each cell
 		hex_id = 0
 		self.clove_grid = []
-		
 		for cell in l:
 			cell_dict = {}
 			cell_dict['center'] = cell['center']
@@ -338,14 +340,21 @@ class LTESim:
 #		
 #		np.save(of_sinr_map + '.npy', self.sinr_map)
 	
-	def get_sinr_clove(self, of_sinr_map='sinr_map'):
+	def get_sinr_clove(self, of_sinr_map='sinr_map', of_inf_map='inf_map'):
 		
+		self.sinr_map = np.empty((len(self.y), len(self.y)))
+		#init with -80 dB 
+		self.sinr_map.fill(-60)
+		self.inf_map = x = [[{} for i in range(len(self.y))] for j in range(len(self.y))]
 		
 		k = 1
 		for cell in self.clove_grid:
 			print('>> Processing cell {}'.format(k))
 			for h in cell['hex']:
 				for pt in h['points']:
+				
+					pt_dict = {}
+					
 					i = pt.x
 					j = pt.y
 					u = Point(self.y[i], self.y[j])
@@ -353,21 +362,34 @@ class LTESim:
 					# calculate prx from current BS
 					r, theta, aplha = self.get_inf_params(u, cell['center'], h['center'])
 					conn_bs_prx = self.dbm_pw(self.get_prx(r, theta, aplha))
-					
-					ibs = self.topo.get_inf_bs(h['center'], h['num'])
+					pt_dict['conn_bs_prx'] = conn_bs_prx
+					print(h['center'].x, h['center'].y, cell['center'].x, cell['center'].y)
+					ibs = self.topo.get_inf_bs(cell['center'], h['num'])
 					sum = 0
+					pt_dict['ibs'] = []
 					for bs in ibs:
+						ibs_dict = {}
 						# for this interfering bs, center of cell and sector
 						cell_c = bs['cell_c']
 						hex_c = bs['hex_c']
+						if (k <= 7):
+							hex_id = self.get_hex_id_from_center(cell_c, hex_c)
+						else:
+							hex_id = -1	
+						ibs_dict['hex_id'] = hex_id
 						r, theta, aplha = self.get_inf_params(u, cell_c, hex_c)
 						# calculate prx for this scenario
-						sum += self.dbm_pw(self.get_prx(r, theta, aplha))
+						prx = self.dbm_pw(self.get_prx(r, theta, aplha))
+						ibs_dict['prx'] = prx
+						sum += prx
+						pt_dict['ibs'].append(ibs_dict)
 					sinr = conn_bs_prx/(sum + self.dbm_pw(self.N))	
 					sinr = 10*np.log10(sinr)
 					self.sinr_map[i,j] = sinr
+					self.inf_map[i][j] = pt_dict
 			k += 1	
-		np.save(of_sinr_map + '.npy', self.sinr_map)		
+		np.save(of_sinr_map + '.npy', self.sinr_map)
+		np.save(of_inf_map + '.npy', self.inf_map)		
 	
 	def load_grid_conf(self, file='gconf'):
 		self.grid_conf = np.load(file+'.npy', allow_pickle='TRUE').item()
@@ -381,6 +403,10 @@ class LTESim:
 		self.sinr_map = np.load(file+'.npy', allow_pickle='TRUE')
 #		print(type(self.sinr_map))
 
+	def load_inf_map(self, file='inf_map'):
+		self.inf_map = np.load(file+'.npy', allow_pickle='TRUE')
+#		print(type(self.inf_map))
+
 	def load_ytick(self, file='ytick'):
 		self.y = np.load(file+'.npy', allow_pickle='TRUE')
 		
@@ -388,6 +414,7 @@ class LTESim:
 		self.load_grid_conf()
 		self.load_pt_map()
 		self.load_sinr_map()
+		self.load_inf_map()
 		self.load_ytick()							
 	
 	def print_topo(self, cmap='inferno'):
@@ -524,10 +551,33 @@ class LTESim:
 		plt.clf()
 		plt.cla()
 		plt.close()
-	
-	def get_sinr_clove_eta(self, eta):
 		
+	def get_hex_id_from_center(self, cc, hc):
+		print('cc: ({}, {}) hc: ({}, {})'.format(cc.x, cc.y, hc.x, hc.y))
+		for cell in self.clove_grid:
+			c = cell['center']
+			print('cell compare: ({}, {})'.format(c.x, c.y))
+			if not(np.isclose(c.x, cc.x) and np.isclose(c.y, cc.y)):
+				continue
+			for h in cell['hex']:
+				c = h['center']
+				print('hex compare: ({}, {})'.format(c.x, c.y))
+				if (np.isclose(c.x, hc.x) and np.isclose(c.y, hc.y)):
+					return h['id']
+			break		
+		
+		raise Exception('Invalid hex center in argument. Check your code!')			
+	
+	def get_ci(self, eta):
+		
+		if (len(eta) != 21):
+			raise Exception('ERROR: eta must be of size 21')
+			
+		# sinr vector
+		sinr = [None]*21	
 		k = 1
+		hex_id = 0
+		
 		for cell in self.clove_grid:
 			print('>> [ETA SINR] Processing cell {}'.format(k))
 			for h in cell['hex']:
@@ -548,12 +598,19 @@ class LTESim:
 						hex_c = bs['hex_c']
 						r, theta, aplha = self.get_inf_params(u, cell_c, hex_c)
 						# calculate prx for this scenario
-						sum += self.dbm_pw(self.get_prx(r, theta, aplha))
+						sum += eta[hex_id]*self.dbm_pw(self.get_prx(r, theta, aplha))
 					sinr = conn_bs_prx/(sum + self.dbm_pw(self.N))	
 					sinr = 10*np.log10(sinr)
 					self.sinr_map[i,j] = sinr
+							
 			k += 1	
-		np.save(of_sinr_map + '.npy', self.sinr_map)			
+			# we are only processing the inner 21 cells
+			if (k==8):
+				break
+		
+		# now for each point calculate cell capacity ci
+		
+					
 #	# Calculate max achievable rate
 #	def max_rate(self, u):
 #		rate = (self.a)*(self.B)*min(np.log2(1 + self.b*self.get_sinr_nbs(u)),self.cmax)

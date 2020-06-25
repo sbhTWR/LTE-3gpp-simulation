@@ -311,7 +311,13 @@ class HexGrid():
 			init_ang = -np.pi/6
 #			init_ang = 0
 			ring.append(self.get_clove_cells(Point(dist*np.cos(init_ang + i*ang_diff), dist*np.sin(init_ang + i*ang_diff))))
-			ring.append(self.get_clove_cells(Point(2*dist*np.cos(init_ang + i*ang_diff), 2*dist*np.sin(init_ang + i*ang_diff))))
+#			ring.append(self.get_clove_cells(Point(2*dist*np.cos(init_ang + i*ang_diff), 2*dist*np.sin(init_ang + i*ang_diff))))
+		
+		# a separate loop, just for the sake of maintaining order
+		for i in range(0,6):
+			init_ang = -np.pi/6
+#			init_ang = 0
+			ring.append(self.get_clove_cells(Point(2*dist*np.cos(init_ang + i*ang_diff), 2*dist*np.sin(init_ang + i*ang_diff))))	
 			
 		for i in range(0,6):
 #				init_ang = -np.pi/6
