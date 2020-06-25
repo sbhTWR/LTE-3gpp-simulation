@@ -11,25 +11,27 @@ from grid import *
 x = 35.681308
 y = 139.767127
 X = pd.read_pickle('data22.pkl') # an example dataset
-X = X.astype(float)
-X['Latitude'] = X['Latitude'].apply(lambda t: np.sign(t - float(x))*(geopy.distance.vincenty((t, y), (x, y)).m)) 
-X['Longitude'] = X['Longitude'].apply(lambda t: np.sign(t - float(y))*(geopy.distance.vincenty((x, t), (x, y)).m))
+#X = X.astype(float)
+#X['Latitude'] = X['Latitude'].apply(lambda t: np.sign(t - float(x))*(geopy.distance.vincenty((t, y), (x, y)).m)) 
+#X['Longitude'] = X['Longitude'].apply(lambda t: np.sign(t - float(y))*(geopy.distance.vincenty((x, t), (x, y)).m))
 
-X['Latitude'] = X['Latitude']/20
-X['Longitude'] = X['Longitude']/20
+#X['Latitude'] = X['Latitude']/20
+#X['Longitude'] = X['Longitude']/20
 
-coords = [Point(x,y) for x,y in zip(X['Latitude'], X['Longitude'])]
+#coords = [Point(x,y) for x,y in zip(X['Latitude'], X['Longitude'])]
 eta = [0.5]*61
 
 sim = LTESim()
 sim.set_topology(nrings=4)
 #sim.set_delta(coords)
-
 #sim.create_grid(steps=200)
 sim.load_all()
-sim.get_sinr_clove()
-#print(sim.point_map['(0,0,0)'][0].x)
-sim.print_topo()
+#sim.get_sinr_clove()
+#sim.print_topo()
+sim.set_coords(X, x, y)
+#sim.print_vor_tes(True)
+sim.grid_est_traffic()
+sim.print_density_map()
 
 #points = np.random.rand(10,2) #random
 #vor = Voronoi(points)

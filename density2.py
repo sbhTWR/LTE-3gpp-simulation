@@ -1,27 +1,25 @@
-import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+import geopy.distance
 from scipy.spatial import Voronoi, voronoi_plot_2d
-from mpl_toolkits.mplot3d import Axes3D
+
+from kpi import *
+from grid import *
+
+from scipy.spatial import Voronoi
 from shapely.geometry import Polygon, MultiPoint, Point
 
-# for more solutions, look at :
-# https://stackoverflow.com/questions/34968838/python-finite-boundary-voronoi-cells
-
-def PolyArea(x,y):
-	return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
-    
+# ---- Voronoi finite plot 2D -----
 def voronoi_finite_polygons_2d(vor, radius=None):
     """
     Reconstruct infinite voronoi regions in a 2D diagram to finite
     regions.
-
     Parameters
     ----------
     vor : Voronoi
         Input diagram
     radius : float, optional
         Distance to 'points at infinity'.
-
     Returns
     -------
     regions : list of tuples
@@ -30,7 +28,6 @@ def voronoi_finite_polygons_2d(vor, radius=None):
         Coordinates for revised Voronoi vertices. Same as coordinates
         of input vertices, with 'points at infinity' appended to the
         end.
-
     """
 
     if vor.points.shape[1] != 2:
@@ -41,7 +38,7 @@ def voronoi_finite_polygons_2d(vor, radius=None):
 
     center = vor.points.mean(axis=0)
     if radius is None:
-        radius = vor.points.ptp(axis=0).max()
+        radius = vor.points.ptp().max()*2
 
     # Construct a map containing all ridges for a given point
     all_ridges = {}
@@ -93,86 +90,76 @@ def voronoi_finite_polygons_2d(vor, radius=None):
 
     return new_regions, np.asarray(new_vertices)
 
-## make up data points
-#np.random.seed(1234)
-#points = np.random.rand(15, 2)
+# ---- end voronoi finite plot 2d ----    
+x = 35.681308
+y = 139.767127
 
-## compute Voronoi tesselation
-#vor = Voronoi(points)
+X = pd.read_pickle('data22.pkl') # an example dataset
+X = X.astype(float)
+X['Latitude'] = X['Latitude'].apply(lambda t: np.sign(t - float(x))*(geopy.distance.vincenty((t, y), (x, y)).m)) 
+X['Longitude'] = X['Longitude'].apply(lambda t: np.sign(t - float(y))*(geopy.distance.vincenty((x, t), (x, y)).m))
 
-## plot
-#regions, vertices = voronoi_finite_polygons_2d(vor)
-#print("--")
-#print(regions)
-#print("--")
-#print(vertices)
+X['Latitude'] = X['Latitude']/20
+X['Longitude'] = X['Longitude']/20
 
-## colorize
-#for region in regions:
-#	polygon = vertices[region]
-#	x = []
-#	y = []
-#	for p in polygon:
-#		x.append(p[0])
-#		y.append(p[1])
-#	A = PolyArea(x,y)
-#	plt.fill(*zip(*polygon), alpha=0.4)
-#	tx = sum(x)/len(x)
-#	ty = sum(y)/len(y)
-#	plt.text(tx, ty, str(round(1/A, 2)))
+coords = [Point(x,y) for x,y in zip(X['Latitude'], X['Longitude'])]
+points = [[x,y] for x,y in zip(X['Latitude'], X['Longitude'])]
 
-#plt.plot(points[:,0], points[:,1], 'ko')
-##plt.xlim(vor.min_bound[0] - 0.1, vor.max_bound[0] + 0.1)
-##plt.ylim(vor.min_bound[1] - 0.1, vor.max_bound[1] + 0.1)
+points = np.array(points)
+# compute Voronoi tesselation
+vor = Voronoi(points)
 
+# get regions and vertices
+# plot
+regions, vertices = voronoi_finite_polygons_2d(vor)
+
+eta = [0.5]*57
+
+d = 500
+grid = HexGrid(d, 2)
+
+l = grid.get_clove_rings()
+
+#bbox = Polygon() # empty geometry
+bpts = []
+for cell in l:
+	# center is cell['center']
+	#plt.scatter(cell['center'].x, cell['center'].y, marker='1', color='black', s=200)
+	for c in cell['hex']:
+		hex = Hexagon(c, d)
+		#bx, by = hex.plt_coords()
+		#plt.plot(bx, by, color='black')
+		x, y = hex.ext_coords()
+		for p,q in zip(x,y):
+			bpts.append([p,q])
+#		bbox = bbox.union(Polygon(pts))
+		
+#polygon = [p for p in bbox.exterior.coords]	
+#allparts = [p.buffer(0) for p in bbox.geometry]
+#polygon.geometry = shapely.ops.cascaded_union(allparts)
+#x, y = polygon.geometry.exterior.xy  # here happens the error	
+#plt.plot(x, y)
+#plt.show()		
+#print(bpts)
+# get the bounding polygon
+box = MultiPoint(bpts).convex_hull
+
+#x,y = box.exterior.xy
+#plt.plot(x,y)
 #plt.show()
 
-# Create a grid and calculate density for each point
+# colorize
+for region in regions:
+    polygon = vertices[region]
+    # Clipping polygon
+    poly = Polygon(polygon)
+    poly = poly.intersection(box)
+    polygon = [p for p in poly.exterior.coords]
 
-#-------second solution-----------------
-## make up data points
-#points = np.random.rand(15,2)
+    plt.fill(*zip(*polygon), alpha=0.4)
 
-## add 4 distant dummy points
-#points = np.append(points, [[999,999], [-999,999], [999,-999], [-999,-999]], axis = 0)
+plt.plot(points[:, 0], points[:, 1], 'ko')
+plt.axis('equal')
+plt.show()
 
-## compute Voronoi tesselation
-#vor = Voronoi(points)
 
-## plot
-#voronoi_plot_2d(vor, show_vertices = False)
-
-##fig = plt.figure()
-##ax = fig.gca(projection='3d')
-
-## colorize
-#for i,region in enumerate(vor.regions):
-##	print(region)
-#	if (len(region)==0):
-#		continue
-#	if not -1 in region:
-#		polygon = [vor.vertices[i] for i in region]
-#		x = []
-#		y = []
-#		for p in polygon:
-#			x.append(p[0])
-#			y.append(p[1])
-#		A = PolyArea(x,y)
-##		plt.plot(x, y, 1/A)	
-##		print(A)
-#		plt.fill(*zip(*polygon))
-##		print(np.where(vor.point_region == i)[0])
-##		if (len(np.where(vor.point_region == i)[0]) == 0):
-##			continue
-##		p = np.where(vor.point_region == i)[0][0]
-##		print(p)
-#		tx = sum(x)/len(x)
-#		ty = sum(y)/len(y)
-#		plt.text(tx, ty, str(round(1/A, 2)))
-
-## fix the range of axes
-##plt.xlim([0,1]), plt.ylim([0,1])
-#plt.legend()
-
-#plt.show()
-##plt.show()

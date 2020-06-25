@@ -1,11 +1,17 @@
 from grid import *
 import matplotlib.pyplot as plt 
+import geopy.distance
+import numpy as np
+import shapely.geometry as shape
+from utils import *
+from mpl_toolkits.mplot3d import Axes3D
 
 class LTESim:
 	def __init__(self):
 		# setup the class with the default values
 		self.point_map = {}
 		self.sinr_map = None
+		self.density_map = None
 		self.grid_conf = {}
 		
 		self.set_fast_fading_margin()
@@ -27,7 +33,9 @@ class LTESim:
 		# grid for clove topology
 		self.clove_grid = []
 		self.y = []
-
+		# coords
+		self.coords = None
+		self.points = None
 	# set fast fading margin value in dB
 	
 	def set_fast_fading_margin(self, val = -2):
@@ -385,6 +393,129 @@ class LTESim:
 		plt.cla()
 		plt.close()
 	
+	def set_coords(self, X, x, y, scale_down=20):
+		X = X.astype(float)
+		X['Latitude'] = X['Latitude'].apply(lambda t: np.sign(t - float(x))*(geopy.distance.vincenty((t, y), (x, y)).m)) 
+		X['Longitude'] = X['Longitude'].apply(lambda t: np.sign(t - float(y))*(geopy.distance.vincenty((x, t), (x, y)).m))
+
+		X['Latitude'] = X['Latitude']/scale_down
+		X['Longitude'] = X['Longitude']/scale_down
+		self.coords = [Point(x,y) for x,y in zip(X['Latitude'], X['Longitude'])]
+		self.points = [[x,y] for x,y in zip(X['Latitude'], X['Longitude'])]
+		self.points = np.array(self.points)
+	
+	def print_vor_tes(self, lim=False, traffic_est_scale = 1000000):
+	
+		vor = Voronoi(self.points)	
+		regions, vertices = voronoi_finite_polygons_2d(vor)
+		# colorize
+		for region in regions:
+			polygon = vertices[region]
+			x = []
+			y = []
+			for p in polygon:
+				x.append(p[0])
+				y.append(p[1])
+			A = PolyArea(x,y)
+			plt.fill(*zip(*polygon), alpha=0.4)
+			tx = sum(x)/len(x)
+			ty = sum(y)/len(y)
+			plt.text(tx, ty, str(round(traffic_est_scale/A, 2)))
+
+		plt.plot(self.points[:,0], self.points[:,1], 'ko')
+		
+		if (lim is True):
+			plt.xlim(vor.min_bound[0] - 0.1, vor.max_bound[0] + 0.1)
+			plt.ylim(vor.min_bound[1] - 0.1, vor.max_bound[1] + 0.1)
+			
+		plt.show()
+		# Clear the plot
+		plt.clf()
+		plt.cla()
+		plt.close()
+	
+	def grid_est_traffic(self, traffic_est_scale = 1000000):
+		density_list = []
+		
+		vor = Voronoi(self.points)	
+		regions, vertices = voronoi_finite_polygons_2d(vor)
+		# colorize
+		for region in regions:
+			reg_dict = {}
+			polygon = vertices[region]
+			polyshape = shape.Polygon(polygon)
+			x = []
+			y = []
+			for p in polygon:
+				x.append(p[0])
+				y.append(p[1])
+			A = PolyArea(x,y)
+			
+			reg_dict['polygon'] = polyshape
+			reg_dict['density'] = traffic_est_scale/A
+			density_list.append(reg_dict)
+		
+		
+		self.density_map = np.empty((len(self.y), len(self.y)))	
+		# iterate through the grid and calculate density for each point
+		for i in range(len(self.y)):
+			for j in range(len(self.y)):
+				point = shape.Point(self.y[i], self.y[j])
+				# iterate through the density dict
+				for region in density_list:
+					if (region['polygon'].contains(point) is True):
+						self.density_map[i,j] = region['density']
+						break
+						
+	def get_density(self, i, j):
+		return self.density_map[i,j]					
+		
+	def print_density_map(self):
+		fig = plt.figure()
+		ax = plt.axes(projection='3d')
+#		X = []
+#		Y = []
+#		Z = []
+#		
+#		for i in range(len(self.y)):
+#			for j in range(len(self.y)):
+#				X.append(i)
+#				Y.append(j)
+#				Z.append(self.density_map[i,j])
+#		
+#		X = np.array(X)
+#		Y = np.array(Y)
+#		Z = np.array(Z)	
+		X, Y = np.meshgrid(np.arange(len(self.y)), np.arange(len(self.y)))
+		Z = []
+#		print(X)
+#		for x, y in zip(X,Y):
+#			Z.append([self.density_map[x[0], x[1]], self.density_map[y[0], y[1]]])
+		
+		for i in range(len(self.y)):
+			l = []
+			for j in range(len(self.y)):
+				val = self.density_map[X[i][j], Y[i][j]]
+				if (val > 10):
+					val = 10
+				l.append(val)
+			
+			Z.append(l)
+				
+		Z = np.array(Z)		
+		ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+                cmap='viridis', edgecolor='none')
+		ax.set_title('spatial traffic densities')
+		
+		ax._axis3don = False
+		ax.w_zaxis.line.set_lw(0.0)
+		ax.set_zticks([])
+#		ax.set_zlim(200)
+		plt.show()						
+		# Clear the plot
+		plt.clf()
+		plt.cla()
+		plt.close()
 #	# Calculate max achievable rate
 #	def max_rate(self, u):
 #		rate = (self.a)*(self.B)*min(np.log2(1 + self.b*self.get_sinr_nbs(u)),self.cmax)

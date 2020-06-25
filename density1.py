@@ -19,17 +19,17 @@ convex_hull = MultiPoint([Point(i) for i in points]).convex_hull.buffer(2)
 
 # --- Alternative 1 ---
 
-#result = MultiPolygon(
-#    [poly.intersection(convex_hull) for poly in polygonize(lines)])
-#result = MultiPolygon(
-#    [p for p in result]
-#    + [p for p in convex_hull.difference(unary_union(result))])
+result = MultiPolygon(
+    [poly.intersection(convex_hull) for poly in polygonize(lines)])
+result = MultiPolygon(
+    [p for p in result]
+    + [p for p in convex_hull.difference(unary_union(result))])
 
 # --- Alternative 2 ---
-pts = MultiPoint([Point(i) for i in points])
-mask = pts.convex_hull.union(pts.buffer(10, resolution=5, cap_style=3))
-result = MultiPolygon(
-    [poly.intersection(mask) for poly in polygonize(lines)])
+#pts = MultiPoint([Point(i) for i in points])
+#mask = pts.convex_hull.union(pts.buffer(10, resolution=5, cap_style=3))
+#result = MultiPolygon(
+#    [poly.intersection(mask) for poly in polygonize(lines)])
     
 # --- end alternative ---    
 plt.plot(points[:,0], points[:,1], 'ko')
