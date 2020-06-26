@@ -19,7 +19,7 @@ X = pd.read_pickle('data22.pkl') # an example dataset
 #X['Longitude'] = X['Longitude']/20
 
 #coords = [Point(x,y) for x,y in zip(X['Latitude'], X['Longitude'])]
-eta = [0.5]*61
+eta = [0.5]*57
 
 sim = LTESim()
 sim.set_topology(nrings=4)
@@ -27,12 +27,13 @@ sim.set_topology(nrings=4)
 #sim.create_grid(steps=200)
 sim.load_all()
 #sim.get_sinr_clove()
-sim.print_topo()
-#sim.set_coords(X, x, y)
+#sim.print_topo()
+sim.set_coords(X, x, y)
 #sim.print_vor_tes(True)
-#sim.grid_est_traffic()
+sim.grid_est_traffic(traffic_est_scale = 1000000)
 #sim.print_density_map()
-
+pr = sim.solve(eta)
+print(pr)
 #points = np.random.rand(10,2) #random
 #vor = Voronoi(points)
 

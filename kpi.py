@@ -16,6 +16,7 @@ class LTESim:
 		self.grid_conf = {}
 		
 		self.set_num_flows()
+		self.set_think_time()
 		self.set_flow_size()
 		self.set_fast_fading_margin()
 		self.set_antenna_diversity_gain()
@@ -55,7 +56,7 @@ class LTESim:
 		setattr(self, 'think_time', val)	
 			
 	# set fast fading margin value in dB
-	def set_flow_size(self, val = 0.032):
+	def set_flow_size(self, val = 32):
 		setattr(self, 'omega', val)	
 		
 	# set fast fading margin value in dB
@@ -384,9 +385,12 @@ class LTESim:
 						cell_c = bs['cell_c']
 						hex_c = bs['hex_c']
 						if (k <= 7):
-							hex_id = self.get_hex_id_from_center(cell_c, hex_c)
+							hex_id = self.get_hex_id_from_center(cell_c, hex_c, strict=True)
 						else:
-							hex_id = -1	
+							hex_id = self.get_hex_id_from_center(cell_c, hex_c, strict=False)
+						
+						if (hex_id == -1): # do not take into account ibs not present in topology
+							continue	
 						ibs_dict['hex_id'] = hex_id
 						r, theta, aplha = self.get_inf_params(u, cell_c, hex_c)
 						# calculate prx for this scenario
@@ -563,7 +567,7 @@ class LTESim:
 		plt.cla()
 		plt.close()
 		
-	def get_hex_id_from_center(self, cc, hc):
+	def get_hex_id_from_center(self, cc, hc, strict=False):
 #		print('cc: ({}, {}) hc: ({}, {})'.format(cc.x, cc.y, hc.x, hc.y))
 		for cell in self.clove_grid:
 			c = cell['center']
@@ -577,12 +581,15 @@ class LTESim:
 					return h['id']
 			break		
 		
-		raise Exception('Invalid hex center in argument. Check your code!')			
+		if (strict is True):
+			raise Exception('Invalid hex center in argument. Check your code!')
+		else:
+			return -1				
 	
 	def get_eta(self, eta):
 		
-		if (len(eta) != 21):
-			raise Exception('ERROR: eta must be of size 21')
+		if (len(eta) != 57):
+			raise Exception('ERROR: eta must be of size 57')
 			
 		self.ci_map = np.empty((len(self.y), len(self.y))) 
 		self.ci_map.fill(0)
@@ -606,7 +613,7 @@ class LTESim:
 						# for this interfering bs, center of cell and sector
 						hex_id = bs['hex_id']
 						prx = bs['prx']
-						print('>> hex_id {}'.format(hex_id))
+#						print('>> hex_id {}'.format(hex_id))
 						# calculate prx for this scenario
 						sum += eta[hex_id]*prx
 					sinr = conn_bs_prx/(sum + self.dbm_pw(self.N))	
@@ -615,12 +622,12 @@ class LTESim:
 							
 			k += 1	
 			# we are only processing the inner 21 cells
-			if (k==8):
-				break
+#			if (k==8):
+#				break
 		
-		self.mew = [None]*21
-		self.ro = [None]*21
-		eta = [None]*21
+		self.mew = [None]*57
+		self.ro = [None]*57
+		eta = [None]*57
 		# now integrate and calculate average cell capacity for each of the 21 cells
 		for cell in self.clove_grid:
 			print('>> [ETA Ci] Processing cell {}'.format(k))
@@ -649,27 +656,33 @@ class LTESim:
 				
 				lam = lam*lam_av	
 				mew = avc/self.omega
+				print('avc = {} lam = {} mew = {}'.format(avc, lam, mew))
 				self.mew[h['id']] = mew
 				self.ro[h['id']] = lam/mew
 								
 			k += 1	
 			# we are only processing the inner 21 cells
-			if (k==8):
-				break
+#			if (k==8):
+#				break
 			
-			eta = self.ro*np.power(1 - self.ro, float(self.num_flows))/(1 - np.power(self.ro, float(self.num_flows)))
-			return eta
+		for i in range(57):
+			eta[i] = self.ro[i]*np.power(1 - self.ro[i], float(self.num_flows))/(1 - np.power(self.ro[i], float(self.num_flows)))
+				
+		return eta
 				
 		
-	def optimize(self, init_eta):
+	def solve(self, init_eta):
 		
+		iter = 1
 		tol = 0.01
 		prev_eta = init_eta
 		new_eta = self.get_eta(prev_eta)
+		print('[SOLVE] iteration: {} eta: {}'.format(iter, new_eta))
 		while not(np.isclose(new_eta, prev_eta, atol=tol).all()):
 			prev_eta = new_eta
 			new_eta = self.get_eta(new_eta)
-		
+			iter = iter + 1
+			print('[SOLVE] iteration: {} eta: {}'.format(iter, new_eta))
 		return new_eta					
 #	# Calculate max achievable rate
 #	def max_rate(self, u):
