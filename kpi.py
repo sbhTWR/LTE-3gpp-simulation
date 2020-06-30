@@ -47,16 +47,16 @@ class LTESim:
 		self.ro = None
 		self.mew = None
 		
-	# set fast fading margin value in dB
+	# set number of flows that can served parallely
 	def set_num_flows(self, val = 2):
 		setattr(self, 'num_flows', val)
 			
-	# set fast fading margin value in dB
+	# set think time of each user in seconds
 	def set_think_time(self, val = 2):
 		setattr(self, 'think_time', val)	
 			
 	# set fast fading margin value in dB
-	def set_flow_size(self, val = 32):
+	def set_flow_size(self, val = 64):
 		setattr(self, 'omega', val)	
 		
 	# set fast fading margin value in dB
@@ -361,8 +361,9 @@ class LTESim:
 		
 		k = 1
 		for cell in self.clove_grid:
-			print('>> Processing cell {}'.format(k))
+			print('[SINR CLOVE] Processing cell {}'.format(k))
 			for h in cell['hex']:
+				print('	[SINR CLOVE] Processing hex {}'.format(h['id']))
 				for pt in h['points']:
 				
 					pt_dict = {}
@@ -375,7 +376,7 @@ class LTESim:
 					r, theta, aplha = self.get_inf_params(u, cell['center'], h['center'])
 					conn_bs_prx = self.dbm_pw(self.get_prx(r, theta, aplha))
 					pt_dict['conn_bs_prx'] = conn_bs_prx
-					print(h['center'].x, h['center'].y, cell['center'].x, cell['center'].y)
+#					print(h['center'].x, h['center'].y, cell['center'].x, cell['center'].y)
 					ibs = self.topo.get_inf_bs(cell['center'], h['num'])
 					sum = 0
 					pt_dict['ibs'] = []
@@ -398,6 +399,7 @@ class LTESim:
 						ibs_dict['prx'] = prx
 						sum += prx
 						pt_dict['ibs'].append(ibs_dict)
+						print('		[SINR CLOVE] inf bs id: {} prx: {}'.format(ibs_dict['hex_id'], ibs_dict['prx']))
 					sinr = conn_bs_prx/(sum + self.dbm_pw(self.N))	
 					sinr = 10*np.log10(sinr)
 					self.sinr_map[i,j] = sinr
@@ -484,7 +486,7 @@ class LTESim:
 		plt.cla()
 		plt.close()
 	
-	def grid_est_traffic(self, traffic_est_scale = 1000000):
+	def grid_est_traffic(self, traffic_est_scale = 100000):
 		density_list = []
 		
 		vor = Voronoi(self.points)	
@@ -611,24 +613,40 @@ class LTESim:
 					sum = 0
 					for bs in inf['ibs']:
 						# for this interfering bs, center of cell and sector
-						hex_id = bs['hex_id']
+						id = bs['hex_id']
 						prx = bs['prx']
+						if (eta[id] < 0):
+							print('[DIAG] eta {} id {}'.format(eta[id], id))
 #						print('>> hex_id {}'.format(hex_id))
 						# calculate prx for this scenario
-						sum += eta[hex_id]*prx
-					sinr = conn_bs_prx/(sum + self.dbm_pw(self.N))	
-					sinr = 10*np.log10(sinr)
+						sum += eta[id]*prx
+					sinr_ratio = conn_bs_prx/(sum + self.dbm_pw(self.N))	
+					sinr = 10*np.log10(sinr_ratio)
 					self.ci_map[i][j] = (self.a)*(self.B)*min(np.log2(1 + self.b*sinr), self.cmax)
+					if (np.isnan(self.ci_map[i][j])):
+						print('>> Cell capacity calculation: ({}, {}) sinr_ratio: {} conn_bs_prx: {} sum: {} N: {}'.format(i, j, sinr_ratio, conn_bs_prx, sum, self.dbm_pw(self.N)))
 							
 			k += 1	
 			# we are only processing the inner 21 cells
 #			if (k==8):
 #				break
 		
+#		plt.imshow(self.density_map, cmap='inferno')
+#		plt.colorbar()
+#		plt.show()			
+#		
+#		# Clear the plot
+#		plt.clf()
+#		plt.cla()
+#		plt.close()
+		
 		self.mew = [None]*57
 		self.ro = [None]*57
 		eta = [None]*57
-		# now integrate and calculate average cell capacity for each of the 21 cells
+		
+		k = 1
+		hex_id = 0
+		# now integrate and calculate average cell capacity for each of the 57 cells
 		for cell in self.clove_grid:
 			print('>> [ETA Ci] Processing cell {}'.format(k))
 			for h in cell['hex']:
@@ -640,7 +658,7 @@ class LTESim:
 #					u = Point(self.y[i], self.y[j])
 					area_sum += self.density_map[i,j]
 				
-				area_sum = area_sum*self.A	
+				area_sum = area_sum*self.A
 				
 				avc = 0	
 				lam_av = 1/self.think_time
@@ -651,6 +669,11 @@ class LTESim:
 					j = pt.y
 #					u = Point(self.y[i], self.y[j])
 					res = (self.density_map[i,j]/(area_sum*self.ci_map[i][j]))*du
+					if (np.isnan(res)):
+						print('>> Found one NaN: density: {} ci: {} point: ({}, {})'.format(self.density_map[i,j], self.ci_map[i][j], i, j))
+						lam += self.density_map[i,j]*du
+						# [TODO] instead of skipping this, solve the bug
+						continue
 					avc += 1/res
 					lam += self.density_map[i,j]*du
 				
@@ -659,6 +682,7 @@ class LTESim:
 				print('avc = {} lam = {} mew = {}'.format(avc, lam, mew))
 				self.mew[h['id']] = mew
 				self.ro[h['id']] = lam/mew
+				print('ro for hex id {} : {}'.format(h['id'], self.ro[h['id']]))
 								
 			k += 1	
 			# we are only processing the inner 21 cells
@@ -678,6 +702,7 @@ class LTESim:
 		prev_eta = init_eta
 		new_eta = self.get_eta(prev_eta)
 		print('[SOLVE] iteration: {} eta: {}'.format(iter, new_eta))
+#		return new_eta  #temporary
 		while not(np.isclose(new_eta, prev_eta, atol=tol).all()):
 			prev_eta = new_eta
 			new_eta = self.get_eta(new_eta)

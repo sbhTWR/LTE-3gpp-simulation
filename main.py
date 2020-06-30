@@ -28,6 +28,20 @@ sim.set_topology(nrings=4)
 sim.load_all()
 #sim.get_sinr_clove()
 #sim.print_topo()
+#for i in range(len(sim.y)):
+#	for j in range(len(sim.y)):
+#		pt_dict = sim.inf_map[i][j]
+#		print(pt_dict)
+##		print(type(pt_dict))
+##		try:
+##			print('Point ({}, {}), conn_bs_prx: {}'.format(i, j, pt_dict['conn_bs_prx']))
+##		except:
+##			continue	
+##		for bs in pt_dict['ibs']:
+##			print('		hex_id: {} prx: {}'.format(bs['hex_id'], bs['prx']))
+
+#exit()			 
+		
 sim.set_coords(X, x, y)
 #sim.print_vor_tes(True)
 sim.grid_est_traffic(traffic_est_scale = 1000000)
