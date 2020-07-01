@@ -724,8 +724,8 @@ class LTESim:
 #				break
 			
 		for i in range(57):
-			eta[i] = self.ro[i]*np.power(1 - self.ro[i], float(self.num_flows))/(1 - np.power(self.ro[i], float(self.num_flows)))
-				
+#			eta[i] = self.ro[i]*np.power(1 - self.ro[i], float(self.num_flows))/(1 - np.power(self.ro[i], float(self.num_flows)))
+			eta[i] = self.ro[i]*(1 - np.power(self.ro[i], float(self.num_flows)))/(1 - np.power(self.ro[i], float(self.num_flows+1)))
 		return eta
 				
 		

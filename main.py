@@ -39,9 +39,7 @@ sim.print_topo()
 ##			continue	
 ##		for bs in pt_dict['ibs']:
 ##			print('		hex_id: {} prx: {}'.format(bs['hex_id'], bs['prx']))
-
-exit()			 
-		
+			 		
 sim.set_coords(X, x, y)
 sim.print_vor_tes(True)
 sim.grid_est_traffic(traffic_est_scale = 1000000)
