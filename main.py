@@ -27,7 +27,7 @@ sim.set_topology(nrings=4)
 #sim.create_grid(steps=200)
 sim.load_all()
 #sim.get_sinr_clove()
-#sim.print_topo()
+sim.print_topo()
 #for i in range(len(sim.y)):
 #	for j in range(len(sim.y)):
 #		pt_dict = sim.inf_map[i][j]
@@ -41,10 +41,11 @@ sim.load_all()
 ##			print('		hex_id: {} prx: {}'.format(bs['hex_id'], bs['prx']))
 			 		
 sim.set_coords(X, x, y)
-#sim.print_vor_tes(True)
+sim.print_vor_tes(True)
 sim.grid_est_traffic(traffic_est_scale = 1000000)
 #sim.print_density_map()
 pr, cvg = sim.solve(eta)
+
 print(pr)
 #plt.plot(cvg['iter'], cvg['delta'], color='black')
 #plt.xlabel('# iteration')
