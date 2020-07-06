@@ -48,7 +48,10 @@ def voronoi_finite_polygons_2d(vor, radius=None):
     for (p1, p2), (v1, v2) in zip(vor.ridge_points, vor.ridge_vertices):
         all_ridges.setdefault(p1, []).append((p2, v1, v2))
         all_ridges.setdefault(p2, []).append((p1, v1, v2))
-
+    
+#    print(vor.ridge_points)
+#    print(all_ridges)
+#    print(vor.point_region)
     # Reconstruct infinite regions
     for p1, region in enumerate(vor.point_region):
         vertices = vor.regions[region]
@@ -59,7 +62,15 @@ def voronoi_finite_polygons_2d(vor, radius=None):
             continue
 
         # reconstruct a non-finite region
-        ridges = all_ridges[p1]
+        
+        # a quick hack, sometimes, p1 might not be present in the list
+        # so just skip it. Real reason needs to be found out. It may
+        # happen that skipping it may not be the most correct way of doing it.
+        if (p1 in all_ridges):
+        	ridges = all_ridges[p1]
+        else:
+        	continue	
+        	
         new_region = [v for v in vertices if v >= 0]
 
         for p2, v1, v2 in ridges:

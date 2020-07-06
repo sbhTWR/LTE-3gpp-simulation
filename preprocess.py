@@ -23,8 +23,8 @@ data = data.dropna()
 
 # Maximum number of tweets are on 2016-04-16 and 2016-04-17, so drop all rows related to that date
 # They will act as the test data
-#data = data.drop(data[data['Date']=='2016-04-16'].index)
-#data = data.drop(data[data['Date']=='2016-04-17'].index)
+data = data.drop(data[data['Date']=='2016-04-16'].index)
+data = data.drop(data[data['Date']=='2016-04-17'].index)
 # Very low number of tweets on 2016-04-12, so drop it
 data = data.drop(data[data['Date']=='2016-04-12'].index)
 #--------------------------------------------------------------------------------#
@@ -130,12 +130,24 @@ df_y = []
 ############################################################## 
 for key, item in data:
 	print('Stats for hour {}'.format(key.strftime("%H:%M:%S")))
+#	# --- debuggig ---
+#	if (key.strftime("%H:%M:%S") != '04:00:00'):
+#		continue
+#	# --- end---
 	hdf = data.get_group(key)
 	# iterate through the list and print number of tweets for each day and each hour
 	for date in hdf['Date'].unique():
+#		# --- debuggig ---
+#		if (date != '2016-04-15'):
+#			continue
+#		# --- end---
+		
 		tempdf = hdf[hdf['Date']==date]
 		n = len(tempdf)
 		print('{}: {}'.format(date, n))
+		if (n < 4):
+			print('Number of points very less ({}). Skipping...'.format(n))
+			continue
 #		print(tempdf)
 		tempdf = tempdf[['Latitude','Longitude']]
 		# for tempdf, convert to co-ordinates
@@ -152,9 +164,10 @@ for key, item in data:
 ##############################################################
 # save the dictionary
 ##############################################################
-print('Preprocess complete. Saving the dataset')
+fname = 'ppdataset_train'
+print('Preprocess complete. Saving the dataset to \'{}.py\''.format(fname))
 dataset = {}
 dataset['X'] = pd.DataFrame(df_X)
 dataset['y'] = pd.DataFrame(df_y)
-np.save('ppdataset.npy', dataset)
+np.save(fname + '.npy', dataset)
 

@@ -729,7 +729,7 @@ class LTESim:
 		return eta
 				
 		
-	def solve(self, init_eta):
+	def solve(self, init_eta, max_iter=100):
 		cvg = {'iter': [], 'delta': []}
 		iter = 1
 		tol = 0.0001
@@ -740,7 +740,7 @@ class LTESim:
 		cvg['delta'].append(abs(np.amax(diff)))
 		print('[SOLVE] iteration: {} eta: {}'.format(iter, new_eta))
 #		return new_eta  #temporary
-		while not(np.isclose(new_eta, prev_eta, atol=tol).all()):
+		while (not(np.isclose(new_eta, prev_eta, atol=tol).all()) and not(iter > max_iter)):
 			prev_eta = new_eta
 			new_eta = self.get_eta(new_eta)
 			iter = iter + 1
