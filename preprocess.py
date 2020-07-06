@@ -18,7 +18,7 @@ import pickle
 from kpi import *
 from grid import *
 
-data = pd.read_csv('data/tokyo.csv', sep=',',encoding = 'utf8',lineterminator='\n',low_memory=False, dtype=str)
+data = pd.read_csv('../data/tokyo.csv', sep=',',encoding = 'utf8',lineterminator='\n',low_memory=False, dtype=str)
 data = data.dropna()
 
 # Maximum number of tweets are on 2016-04-16 and 2016-04-17, so drop all rows related to that date
@@ -121,6 +121,11 @@ sim.load_all()
 #sim.get_sinr_clove()
 #sim.print_topo()
 ##############################################################
+# initilize dictionary
+##############################################################
+df_X = []
+df_y = []
+##############################################################
 # iterate through the data and obtain probabilitie
 ############################################################## 
 for key, item in data:
@@ -139,17 +144,17 @@ for key, item in data:
 		sim.grid_est_traffic(traffic_est_scale = 1000000)
 		#sim.print_density_map()
 		pr, cvg = sim.solve(eta)
+		df_X.append(sim.density_map.flatten())
+		df_y.append(pr)
 		print(pr)
 			
 
-#loc = 'clusters/nclusters.png'
-#plt.savefig(loc, dpi=1000, bbox_inches='tight')
-
-#loc = 'clusters/nclusters.eps'
-#plt.savefig(loc, format='eps', dpi=1000, bbox_inches='tight')
-
-## Clear the plot
-#plt.clf()
-#plt.cla()
-#plt.close()
+##############################################################
+# save the dictionary
+##############################################################
+print('Preprocess complete. Saving the dataset')
+dataset = {}
+dataset['X'] = pd.DataFrame(df_X)
+dataset['y'] = pd.DataFrame(df_y)
+np.save('ppdataset.npy', dataset)
 
