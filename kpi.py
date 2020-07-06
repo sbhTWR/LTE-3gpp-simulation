@@ -1,5 +1,6 @@
 from grid import *
 import matplotlib.pyplot as plt 
+import matplotlib.colors as colors
 import geopy.distance
 import numpy as np
 import shapely.geometry as shape
@@ -436,10 +437,24 @@ class LTESim:
 	
 	def print_topo(self, cmap='inferno'):
 		
-		plt.imshow(self.sinr_map, cmap=cmap)
+#		plt.imshow(self.sinr_map, cmap=cmap)
+#		plt.imshow(self.sinr_map, cmap=cmap, norm=colors.LogNorm(vmin=1, vmax=30))
+		
+		
+		plt.imshow(self.sinr_map, cmap=cmap, interpolation = 'sinc', vmin = 0, vmax = 60)
 		plt.colorbar()
+		plt.xlim(35, 160)
+		plt.ylim(35, 160)
+			
+		fig = plt.gcf()
 		plt.show()			
 		
+		loc = 'images/topo.png'
+		fig.savefig(loc, dpi=1000, bbox_inches='tight')
+	
+#		loc = 'images/topo.eps'
+#		fig.savefig(loc, format='eps', dpi=1000, bbox_inches='tight')
+    
 		# Clear the plot
 		plt.clf()
 		plt.cla()
@@ -460,6 +475,8 @@ class LTESim:
 	
 		vor = Voronoi(self.points)	
 		regions, vertices = voronoi_finite_polygons_2d(vor)
+		xb = [vor.min_bound[0] - 0.1, vor.max_bound[0] + 0.1]
+		yb = [vor.min_bound[1] - 0.1, vor.max_bound[1] + 0.1]
 		# colorize
 		for region in regions:
 			polygon = vertices[region]
@@ -472,7 +489,8 @@ class LTESim:
 			plt.fill(*zip(*polygon), alpha=0.4)
 			tx = sum(x)/len(x)
 			ty = sum(y)/len(y)
-			plt.text(tx, ty, str(round(traffic_est_scale/A, 2)))
+			if (xb[0] < tx and tx < xb[1]) and (yb[0] < ty and ty < yb[1]):
+				plt.text(tx, ty, str(round(traffic_est_scale/A, 2)))
 
 #		plt.plot(self.points[:,0], self.points[:,1], 'ko')
 		
@@ -480,7 +498,15 @@ class LTESim:
 			plt.xlim(vor.min_bound[0] - 0.1, vor.max_bound[0] + 0.1)
 			plt.ylim(vor.min_bound[1] - 0.1, vor.max_bound[1] + 0.1)
 			
+		fig = plt.gcf()	
 		plt.show()
+		
+		loc = 'images/vor.png'
+		fig.savefig(loc, dpi=1000, bbox_inches='tight')
+	
+		loc = 'images/vor.eps'
+		fig.savefig(loc, format='eps', dpi=1000, bbox_inches='tight')
+		
 		# Clear the plot
 		plt.clf()
 		plt.cla()
@@ -563,7 +589,15 @@ class LTESim:
 		ax.w_zaxis.line.set_lw(0.0)
 		ax.set_zticks([])
 #		ax.set_zlim(200)
-		plt.show()						
+		fig = plt.gcf()
+		plt.show()	
+		
+		loc = 'images/density.png'
+		fig.savefig(loc, dpi=1000, bbox_inches='tight')
+	
+		loc = 'images/density.eps'
+		fig.savefig(loc, format='eps', dpi=1000, bbox_inches='tight')
+							
 		# Clear the plot
 		plt.clf()
 		plt.cla()
@@ -690,25 +724,30 @@ class LTESim:
 #				break
 			
 		for i in range(57):
-			eta[i] = self.ro[i]*np.power(1 - self.ro[i], float(self.num_flows))/(1 - np.power(self.ro[i], float(self.num_flows)))
-				
+#			eta[i] = self.ro[i]*np.power(1 - self.ro[i], float(self.num_flows))/(1 - np.power(self.ro[i], float(self.num_flows)))
+			eta[i] = self.ro[i]*(1 - np.power(self.ro[i], float(self.num_flows)))/(1 - np.power(self.ro[i], float(self.num_flows+1)))
 		return eta
 				
 		
 	def solve(self, init_eta):
-		
+		cvg = {'iter': [], 'delta': []}
 		iter = 1
-		tol = 0.01
+		tol = 0.0001
 		prev_eta = init_eta
 		new_eta = self.get_eta(prev_eta)
+		diff = [x1 - x2 for (x1, x2) in zip(new_eta, prev_eta)]
+		cvg['iter'].append(iter)
+		cvg['delta'].append(abs(np.amax(diff)))
 		print('[SOLVE] iteration: {} eta: {}'.format(iter, new_eta))
 #		return new_eta  #temporary
 		while not(np.isclose(new_eta, prev_eta, atol=tol).all()):
 			prev_eta = new_eta
 			new_eta = self.get_eta(new_eta)
 			iter = iter + 1
-			print('[SOLVE] iteration: {} eta: {}'.format(iter, new_eta))
-		return new_eta					
+			diff = [x1 - x2 for (x1, x2) in zip(new_eta, prev_eta)]
+			cvg['iter'].append(iter)
+			cvg['delta'].append(abs(np.amax(diff)))
+		return new_eta, cvg					
 #	# Calculate max achievable rate
 #	def max_rate(self, u):
 #		rate = (self.a)*(self.B)*min(np.log2(1 + self.b*self.get_sinr_nbs(u)),self.cmax)

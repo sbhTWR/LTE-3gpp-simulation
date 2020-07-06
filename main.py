@@ -39,15 +39,21 @@ sim.load_all()
 ##			continue	
 ##		for bs in pt_dict['ibs']:
 ##			print('		hex_id: {} prx: {}'.format(bs['hex_id'], bs['prx']))
-
-#exit()			 
-		
+			 		
 sim.set_coords(X, x, y)
 #sim.print_vor_tes(True)
 sim.grid_est_traffic(traffic_est_scale = 1000000)
 #sim.print_density_map()
-pr = sim.solve(eta)
+pr, cvg = sim.solve(eta)
 print(pr)
+#plt.plot(cvg['iter'], cvg['delta'], color='black')
+#plt.xlabel('# iteration')
+#plt.ylabel(r'$\Vert \eta_{new}-\eta_{prev} \Vert_{max}$')
+#fig = plt.gcf()
+#plt.show()
+
+#loc = 'images/iter.eps'
+#fig.savefig(loc, format='eps', dpi=1000, bbox_inches='tight')
 #points = np.random.rand(10,2) #random
 #vor = Voronoi(points)
 
