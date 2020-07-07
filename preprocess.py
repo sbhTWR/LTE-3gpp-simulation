@@ -21,12 +21,18 @@ from grid import *
 data = pd.read_csv('../data/tokyo.csv', sep=',',encoding = 'utf8',lineterminator='\n',low_memory=False, dtype=str)
 data = data.dropna()
 
-# Maximum number of tweets are on 2016-04-16 and 2016-04-17, so drop all rows related to that date
-# They will act as the test data
-data = data.drop(data[data['Date']=='2016-04-16'].index)
-data = data.drop(data[data['Date']=='2016-04-17'].index)
-# Very low number of tweets on 2016-04-12, so drop it
-data = data.drop(data[data['Date']=='2016-04-12'].index)
+## Maximum number of tweets are on 2016-04-16 and 2016-04-17, so drop all rows related to that date
+## They will act as the test data
+# ---- Get the training data -----
+#data = data.drop(data[data['Date']=='2016-04-16'].index)
+#data = data.drop(data[data['Date']=='2016-04-17'].index)
+## Very low number of tweets on 2016-04-12, so drop it
+#data = data.drop(data[data['Date']=='2016-04-12'].index)
+
+# --- Get the test data ---- 
+data1 = data[(data['Date']=='2016-04-16')]
+data2 = data[(data['Date']=='2016-04-17')]
+data = data1.append(data2)
 #--------------------------------------------------------------------------------#
 
 # get date time object
@@ -164,7 +170,7 @@ for key, item in data:
 ##############################################################
 # save the dictionary
 ##############################################################
-fname = 'ppdataset_train'
+fname = 'ppdataset_test'
 print('Preprocess complete. Saving the dataset to \'{}.py\''.format(fname))
 dataset = {}
 dataset['X'] = pd.DataFrame(df_X)
