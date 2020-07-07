@@ -2,6 +2,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
 import numpy as np
+import pickle
 
 # threshold probability for cell being ON
 thres = 0.01
@@ -59,6 +60,19 @@ for i in range(0, num_rows):
 		rows_to_del.append(i)
 
 df_train['y'] = (df_train['y'] > thres).astype(int)
+
+# scale the train data
+train_scaler = StandardScaler()
+df_train['X'] = train_scaler.fit_transform(df_train['X'])
+print(df_train['X'])
+
+##############################################################
+# save the dictionary
+##############################################################
+fname = 'proc_ppdataset_train'
+print('Preprocess complete. Saving train dataset to \'{}.py\''.format(fname))
+np.save(fname + '.npy', df_train)	
+
 ### preprocess test data ###
 print('Pre-process test data...')
 num_rows_test = len(df_test['y'])
@@ -86,8 +100,22 @@ for i in range(0, num_rows_test):
 		print('count: {} i: {}'.format(nans, i))
 		rows_to_del.append(i)
 
-df_test['y'] = (df_test['y'] > thres).astype(int)		
+df_test['y'] = (df_test['y'] > thres).astype(int)	
+
+# scale the test data
+test_scaler = StandardScaler()
+df_test['X'] = test_scaler.fit_transform(df_test['X'])
+print(df_test['X'])
+
+##############################################################
+# save the dictionary
+##############################################################
+fname = 'proc_ppdataset_test'
+print('Preprocess complete. Saving test dataset to \'{}.py\''.format(fname))
+np.save(fname + '.npy', df_test)	
+
 #arr = np.array(df_train['y'])
+
 #pr_mean = arr.mean()
 #print(pr_mean)
 #print(df_train['y'].mean())
@@ -101,8 +129,12 @@ hidden_layer_size = int((input_size + output_size)/2)
 print('Size of hidden layer: {}'.format(hidden_layer_size))
 
 # A neural network with a single hidden layer. 
-clf = MLPClassifier(solver='sgd', hidden_layer_sizes=(hidden_layer_size), random_state=1, verbose=True)
+model = MLPClassifier(solver='sgd', hidden_layer_sizes=(hidden_layer_size), random_state=1, verbose=True)
 #Train the neural network with the training data
-#clf.fit(df_train['X'], df_train['y'])
+model.fit(df_train['X'], df_train['y'])
 
-
+print('Training complete...')
+### save the trained model ###
+fname = 'nn_dump.sav'
+print('Saving trained model to \'{}\'')
+pickle.dump(model, open(fname, 'wb'))
